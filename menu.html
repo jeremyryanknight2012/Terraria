@@ -4,11 +4,7 @@
     <meta charset="UTF-8">
     <title>Terraria - Main Menu</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body { 
             margin: 0; 
@@ -24,7 +20,6 @@
             height: 100vh; 
         }
 
-        /* Parallax Background Layers */
         .menu-bg-layer { 
             position: absolute; 
             width: 110%; 
@@ -65,43 +60,27 @@
             color: white;
         }
 
-        .btn:hover { 
-            background: #4a54d1; 
-            border-color: #fff; 
-            transform: scale(1.05); 
-        }
+        .btn:hover { background: #4a54d1; border-color: #fff; transform: scale(1.05); }
 
-        /* Full Screen Click Overlay for Audio */
-        #audio-overlay {
+        /* Hidden click-to-play backup */
+        #music-fallback {
             position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.8);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid gold;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 14px;
+            color: gold;
             cursor: pointer;
-        }
-
-        #audio-overlay h2 {
-            font-size: 40px;
-            color: #ffd700;
-            text-align: center;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.8; }
+            z-index: 100;
+            display: none; /* Hidden unless autoplay fails */
         }
     </style>
 </head>
-<body>
-
-    <div id="audio-overlay" onclick="startEverything()">
-        <h2>CLICK TO START GAME</h2>
-    </div>
+<body onclick="tryPlayMusic()">
 
     <img src="./thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
     <img src="./thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
@@ -115,22 +94,32 @@
         <div class="btn" onclick="window.location.href='index.html'">Exit to Intro</div>
     </div>
 
+    <div id="music-fallback">🔊 Music is blocked. Click here to enable!</div>
+
 <script>
-    // Path configuration
     const music = new Audio("./audio/menu.mp3");
     music.loop = true;
     music.volume = 0.5;
 
-    function startEverything() {
-        // Remove the overlay
-        document.getElementById('audio-overlay').style.display = 'none';
-        
-        // Play music
+    // Try to play immediately on load
+    window.addEventListener('DOMContentLoaded', () => {
         const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
+        
         if (musicEnabled) {
-            music.play().catch(err => {
-                console.error("Music file not found in /audio/ folder!");
+            music.play().then(() => {
+                console.log("Autoplay successful!");
+            }).catch(err => {
+                console.warn("Autoplay blocked. Waiting for first click.");
+                document.getElementById('music-fallback').style.display = 'block';
             });
+        }
+    });
+
+    // This function runs every time they click the page
+    function tryPlayMusic() {
+        if (music.paused) {
+            music.play();
+            document.getElementById('music-fallback').style.display = 'none';
         }
     }
 
