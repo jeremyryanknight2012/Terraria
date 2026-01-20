@@ -65,16 +65,9 @@
             border-color: #fff; 
             transform: scale(1.05); 
         }
-
-        #status-msg {
-            position: absolute;
-            bottom: 20px;
-            color: rgba(255,255,255,0.3);
-            font-size: 10px;
-        }
     </style>
 </head>
-<body onclick="forcePlay()">
+<body onclick="checkAndPlay()">
 
     <img src="./thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
     <img src="./thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
@@ -88,29 +81,29 @@
         <div class="btn" onclick="window.location.href='index.html'">Exit to Intro</div>
     </div>
 
-    <div id="status-msg">Click anywhere if music fails to auto-play</div>
-
 <script>
     const music = new Audio("./audio/menu.mp3");
     music.loop = true;
     music.volume = 0.5;
 
-    // Autoplay attempt
+    function checkAndPlay() {
+        const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
+        if (musicEnabled && music.paused) {
+            music.play();
+        }
+    }
+
     window.addEventListener('load', () => {
+        // If index.html already started the music, try to play it here automatically
         const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
         if (musicEnabled) {
-            music.play().catch(err => {
-                console.log("Autoplay blocked. User must click splash screen first.");
+            music.play().catch(() => {
+                console.log("Waiting for interaction to resume music.");
             });
         }
     });
 
-    // Backup: play if they click anywhere on this page
-    function forcePlay() {
-        if (music.paused) music.play();
-    }
-
-    // Parallax
+    // Parallax logic
     window.onmousemove = (e) => {
         const x = (e.clientX / window.innerWidth) - 0.5;
         const y = (e.clientY / window.innerHeight) - 0.5;
