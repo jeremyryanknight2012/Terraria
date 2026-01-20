@@ -6,17 +6,21 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            background: #000 url('./thumbnails/bg_2.png') no-repeat center center fixed; 
-            background-size: cover;
+            margin: 0; overflow: hidden; background: #000; 
             font-family: 'Arial', sans-serif; color: white; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; 
+            user-select: none; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; height: 100vh; 
         }
-        h1 { font-size: 48px; text-shadow: 4px 4px #000; margin-bottom: 30px; color: #a2ffaf; }
+        .menu-bg-layer { 
+            position: absolute; width: 110%; height: 110%; top: -5%; left: -5%; 
+            object-fit: cover; z-index: -1; image-rendering: pixelated;
+        }
+        h1 { font-size: 48px; text-shadow: 4px 4px #000; margin-bottom: 20px; color: #a2ffaf; z-index: 10; }
         
         #player-list {
             width: 500px; max-height: 400px; overflow-y: auto;
-            background: rgba(0, 0, 0, 0.7); border: 2px solid #555;
-            padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;
+            background: rgba(0, 0, 0, 0.8); border: 2px solid #555;
+            padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 10;
         }
 
         .player-card {
@@ -27,7 +31,7 @@
         .player-card:hover { background: #4a54d1; border-color: #fff; }
         .player-card img { width: 40px; image-rendering: pixelated; }
 
-        .controls { display: flex; gap: 20px; }
+        .controls { display: flex; gap: 20px; z-index: 10; }
         .btn { 
             background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff; 
             padding: 10px 40px; cursor: pointer; font-size: 20px;
@@ -38,26 +42,48 @@
 </head>
 <body>
 
+    <img src="./thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
+    <img src="./thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
+    <img src="./thumbnails/bg_2.png" class="menu-bg-layer" id="bg-mountains" style="opacity: 0.9;">
+
     <h1>Select Player</h1>
 
-    <div id="player-list">
-        </div>
+    <div id="player-list"></div>
 
     <div class="controls">
-        <div class="btn" onclick="window.location.href='menu.html'">Back</div>
-        <div class="btn" onclick="window.location.href='./character/character.html'">New</div>
+        <div class="btn" onclick="navTo('menu.html')">Back</div>
+        <div class="btn" onclick="navTo('./character/character.html')">New</div>
     </div>
 
 <script>
+    const music = new Audio("./audio/menu.mp3");
+    music.loop = true;
+    music.volume = 0.5;
+
+    // Load music and characters
+    window.addEventListener('load', () => {
+        const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
+        if (musicEnabled) {
+            const savedTime = localStorage.getItem('menuMusicTime');
+            if (savedTime) music.currentTime = parseFloat(savedTime);
+            music.play().catch(e => console.log("Click to play music"));
+        }
+        loadCharacters();
+    });
+
+    // Save music time before leaving
+    function navTo(url) {
+        localStorage.setItem('menuMusicTime', music.currentTime);
+        window.location.href = url;
+    }
+
     function loadCharacters() {
         const container = document.getElementById('player-list');
         const players = JSON.parse(localStorage.getItem('terraria_players') || '[]');
-
         if (players.length === 0) {
             container.innerHTML = '<p style="text-align:center; color:#888;">No characters found.</p>';
             return;
         }
-
         container.innerHTML = players.map(p => `
             <div class="player-card">
                 <img src="./thumbnails/${p.icon}.png">
@@ -69,7 +95,13 @@
         `).join('');
     }
 
-    window.onload = loadCharacters;
+    // Parallax logic
+    window.onmousemove = (e) => {
+        const x = (e.clientX / window.innerWidth) - 0.5;
+        const y = (e.clientY / window.innerHeight) - 0.5;
+        document.getElementById('bg-clouds').style.transform = `translate(${x * 20}px, ${y * 10}px)`;
+        document.getElementById('bg-mountains').style.transform = `translate(${x * 40}px, ${y * 20}px)`;
+    };
 </script>
 </body>
 </html>
