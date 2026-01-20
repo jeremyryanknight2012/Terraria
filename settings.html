@@ -4,95 +4,139 @@
     <meta charset="UTF-8">
     <title>Terraria - Settings</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            margin: 0; 
-            background: #161a3d; 
-            color: white; 
-            font-family: 'Arial', sans-serif; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
+            margin: 0; overflow: hidden; background: #000; 
+            font-family: 'Arial', sans-serif; color: white; 
+            user-select: none; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; height: 100vh; 
         }
-        .container {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 40px;
-            border: 2px solid #6b7aff;
-            border-radius: 10px;
-            text-align: center;
+        .menu-bg-layer { 
+            position: absolute; width: 110%; height: 110%; top: -5%; left: -5%; 
+            object-fit: cover; z-index: -1; image-rendering: pixelated;
         }
-        .setting-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 300px;
-            margin: 20px 0;
-            font-size: 24px;
+        h1 { font-size: 48px; text-shadow: 4px 4px #000; margin-bottom: 30px; color: #ffd700; z-index: 10; }
+
+        .settings-box {
+            width: 500px; background: rgba(0, 0, 0, 0.85); border: 2px solid #555;
+            padding: 30px; display: flex; flex-direction: column; gap: 25px; z-index: 10;
         }
+
+        .setting-item { display: flex; justify-content: space-between; align-items: center; font-size: 22px; }
+
+        /* Custom Slider */
+        input[type="range"] { cursor: pointer; width: 200px; }
+
+        /* Toggle Button */
+        .toggle-btn {
+            background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff;
+            color: white; padding: 5px 20px; cursor: pointer; transition: 0.2s;
+        }
+        .toggle-btn.off { border-color: #ff4d4d; color: #ff4d4d; }
+
         .btn { 
-            background: rgba(35, 40, 90, 0.85); 
-            border: 2px solid #6b7aff; 
-            padding: 10px 30px; 
-            margin-top: 30px;
-            cursor: pointer; 
-            color: white;
-            font-size: 20px;
+            background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff; 
+            padding: 10px 60px; cursor: pointer; font-size: 24px;
+            color: white; margin-top: 20px; transition: 0.2s; z-index: 10;
         }
-        .btn:hover { background: #4a54d1; }
-        
-        /* Toggle Switch Styling */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-        }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute; cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #ccc;
-            transition: .4s; border-radius: 34px;
-        }
-        .slider:before {
-            position: absolute; content: "";
-            height: 26px; width: 26px;
-            left: 4px; bottom: 4px;
-            background-color: white;
-            transition: .4s; border-radius: 50%;
-        }
-        input:checked + .slider { background-color: #2e7d32; }
-        input:checked + .slider:before { transform: translateX(26px); }
+        .btn:hover { background: #4a54d1; border-color: #fff; transform: scale(1.05); }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Settings</h1>
-        
-        <div class="setting-row">
-            <span>Music</span>
-            <label class="switch">
-                <input type="checkbox" id="musicToggle">
-                <span class="slider"></span>
-            </label>
+    <img src="./thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
+    <img src="./thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
+    <img src="./thumbnails/bg_2.png" class="menu-bg-layer" id="bg-mountains" style="opacity: 0.9;">
+
+    <h1>Settings</h1>
+
+    <div class="settings-box">
+        <div class="setting-item">
+            <span>Music Volume</span>
+            <input type="range" id="vol-slider" min="0" max="1" step="0.05" oninput="updateVolume(this.value)">
         </div>
 
-        <button class="btn" onclick="window.location.href='menu.html'">Back to Menu</button>
+        <div class="setting-item">
+            <span>Music Enabled</span>
+            <button id="music-toggle" class="toggle-btn" onclick="toggleMusic()">ON</button>
+        </div>
+
+        <div class="setting-item" style="color: #888; font-size: 14px;">
+            <span>Clear Saved Data</span>
+            <button class="toggle-btn off" onclick="clearData()">RESET</button>
+        </div>
     </div>
 
-    <script>
-        const musicToggle = document.getElementById('musicToggle');
+    <button class="btn" onclick="navBack()">Back</button>
 
-        // Load current setting (Default to true if not set)
-        const currentSetting = localStorage.getItem('musicEnabled') !== 'false';
-        musicToggle.checked = currentSetting;
+<script>
+    const music = new Audio("./audio/menu.mp3");
+    music.loop = true;
 
-        // Save setting when changed
-        musicToggle.addEventListener('change', () => {
-            localStorage.setItem('musicEnabled', musicToggle.checked);
-        });
-    </script>
+    // Load music and current settings
+    window.addEventListener('load', () => {
+        // 1. Handle Music Sync
+        const savedTime = localStorage.getItem('menuMusicTime');
+        if (savedTime) music.currentTime = parseFloat(savedTime);
+
+        // 2. Load Volume
+        const savedVol = localStorage.getItem('musicVolume') || 0.5;
+        music.volume = savedVol;
+        document.getElementById('vol-slider').value = savedVol;
+
+        // 3. Load Toggle State
+        const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
+        updateToggleButton(musicEnabled);
+
+        if (musicEnabled) {
+            music.play().catch(e => console.log("Click to sync audio"));
+        }
+    });
+
+    function updateVolume(val) {
+        music.volume = val;
+        localStorage.setItem('musicVolume', val);
+    }
+
+    function toggleMusic() {
+        const currentState = localStorage.getItem('musicEnabled') !== 'false';
+        const newState = !currentState;
+        localStorage.setItem('musicEnabled', newState);
+        
+        updateToggleButton(newState);
+
+        if (newState) {
+            music.play();
+        } else {
+            music.pause();
+        }
+    }
+
+    function updateToggleButton(isEnabled) {
+        const btn = document.getElementById('music-toggle');
+        btn.innerText = isEnabled ? "ON" : "OFF";
+        btn.className = isEnabled ? "toggle-btn" : "toggle-btn off";
+    }
+
+    function clearData() {
+        if(confirm("This will delete all your characters. Are you sure?")) {
+            localStorage.removeItem('terraria_players');
+            alert("Characters deleted.");
+        }
+    }
+
+    function navBack() {
+        localStorage.setItem('menuMusicTime', music.currentTime);
+        window.location.href = "menu.html";
+    }
+
+    // Parallax logic
+    window.onmousemove = (e) => {
+        const x = (e.clientX / window.innerWidth) - 0.5;
+        const y = (e.clientY / window.innerHeight) - 0.5;
+        document.getElementById('bg-clouds').style.transform = `translate(${x * 20}px, ${y * 10}px)`;
+        document.getElementById('bg-mountains').style.transform = `translate(${x * 40}px, ${y * 20}px)`;
+    };
+</script>
 </body>
 </html>
