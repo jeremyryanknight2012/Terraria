@@ -37,14 +37,15 @@
             image-rendering: pixelated;
         }
 
-        /* Title Styling */
-        h1 { 
-            font-size: 100px; 
-            margin-bottom: 50px; 
-            text-shadow: 8px 8px #000; 
-            color: #a2ffaf; 
-            letter-spacing: 8px; 
+        /* Title Image Styling */
+        #game-title {
+            width: 600px; /* Adjust size as needed */
+            max-width: 80vw;
+            margin-bottom: 40px;
             z-index: 10;
+            image-rendering: pixelated;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+            transition: transform 0.1s ease-out;
         }
 
         /* Menu Buttons */
@@ -103,7 +104,7 @@
     <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
     <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_2.png" class="menu-bg-layer" id="bg-mountains" style="opacity: 0.9;">
     
-    <h1>Terraria</h1>
+    <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/title1.png" id="game-title" alt="Terraria">
     
     <div class="btn-container">
         <div class="btn" onclick="startNewGame()">Single Player</div>
@@ -124,7 +125,7 @@
     // Check localStorage for music setting
     const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
 
-    // Start music on first click (Browser Safety Policy)
+    // Start music on first click
     window.onclick = () => {
         if (!musicStarted && musicEnabled) {
             menuMusic.play().catch(e => console.log("Audio play blocked"));
@@ -138,15 +139,14 @@
         const x = (e.clientX / window.innerWidth) - 0.5;
         const y = (e.clientY / window.innerHeight) - 0.5;
 
-        // Move layers at different speeds
+        // Move layers and Title at different speeds
         document.getElementById('bg-clouds').style.transform = `translate(${x * 20}px, ${y * 10}px)`;
         document.getElementById('bg-mountains').style.transform = `translate(${x * 40}px, ${y * 20}px)`;
+        document.getElementById('game-title').style.transform = `translate(${x * 15}px, ${y * 5}px)`;
     };
 
     function startNewGame() {
-        // Stop menu music before entering game
         menuMusic.pause();
-        // Redirect to your game engine file
         window.location.href = "game.html";
     }
 </script>
