@@ -2,295 +2,88 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Terraria - Full GitHub Build</title>
+    <title>Terraria - Loading</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; color: white; user-select: none; }
-        canvas { display: block; image-rendering: pixelated; }
-        
-        .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; transition: opacity 0.8s; z-index: 20; }
-        .hidden { display: none !important; }
-        
-        #screen-menu { background: #000; overflow: hidden; }
-        .menu-bg-layer { position: absolute; width: 110%; height: 110%; top: -5%; left: -5%; object-fit: cover; z-index: -1; }
-        
-        .btn { 
-            background: rgba(35, 40, 90, 0.85); border: 2px solid #6b7aff; 
-            padding: 15px 50px; margin: 10px; cursor: pointer; font-size: 24px;
-            text-shadow: 2px 2px #000; width: 300px; text-align: center;
-            transition: 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        /* Full screen setup */
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: #000; 
+            overflow: hidden; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
         }
-        .btn:hover { background: #4a54d1; border-color: #fff; transform: scale(1.05); }
 
-        #hud { position: absolute; top: 20px; left: 20px; pointer-events: none; display: none; z-index: 10; }
-        .hotbar { display: flex; gap: 8px; }
-        .slot { width: 48px; height: 48px; background: rgba(0,0,0,0.7); border: 2px solid #aaa; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: 0.1s; }
-        .selected { border-color: #ffd700; box-shadow: 0 0 15px #ffd700; transform: scale(1.1); background: rgba(60, 60, 120, 0.8); }
+        /* Full screen image logic */
+        #splash-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #splash-img { 
+            /* This makes it fill the screen while keeping its shape */
+            max-width: 95%; 
+            max-height: 95%; 
+            width: auto;
+            height: auto;
+            
+            opacity: 0; 
+            transition: opacity 1.2s ease-in-out; 
+            
+            /* Keeps the Re-Logic pixel art looking sharp when scaled */
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            
+            filter: drop-shadow(0 0 50px rgba(255,255,255,0.05)); 
+        }
     </style>
 </head>
 <body>
 
-    <div id="screen-splash" class="screen">
-        <img id="splash-img" src="" style="width: 500px; filter: drop-shadow(0 0 30px rgba(255,255,255,0.1));">
-        <p style="margin-top: 20px; color: #555; font-size: 14px; letter-spacing: 2px;">CLICK TO START AUDIO</p>
+    <div id="splash-container">
+        <img id="splash-img" src="">
     </div>
-
-    <div id="screen-menu" class="screen hidden">
-        <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_0.png" class="menu-bg-layer">
-        <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_1.png" class="menu-bg-layer" style="opacity: 0.8;">
-        <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_2.png" class="menu-bg-layer" style="opacity: 0.9;">
-        
-        <h1 style="font-size: 90px; margin-bottom: 40px; text-shadow: 6px 6px #000; color: #a2ffaf; letter-spacing: 5px;">Terraria</h1>
-        
-        <div class="btn" onclick="showScreen('screen-world')">Single Player</div>
-        <div class="btn" onclick="window.location.href='settings.html'">Settings</div>
-        <div class="btn" onclick="location.reload()">Refresh Assets</div>
-    </div>
-
-    <div id="screen-world" class="screen hidden">
-        <h2 style="font-size: 32px; margin-bottom: 30px;">Choose World</h2>
-        <div class="btn" style="width: 450px; height: 80px; text-align: left; display: flex; align-items: center;" onclick="initGame('Small')">
-            <div style="font-size: 30px; margin-right: 20px;">🌳</div>
-            <div><b>World 1</b><br><span style="font-size: 14px; color: #ccc;">Small World - Journey Mode</span></div>
-        </div>
-        <div class="btn" style="background: #1b5e20; width: 450px;" onclick="initGame('Large')">Create New World</div>
-        <div class="btn" onclick="showScreen('screen-menu')">Back</div>
-    </div>
-
-    <div id="hud">
-        <div class="hotbar">
-            <div id="slot-0" class="slot selected">⛏️</div>
-            <div id="slot-1" class="slot">🧱</div>
-            <div id="slot-2" class="slot">🌑</div>
-        </div>
-    </div>
-
-    <canvas id="gameCanvas"></canvas>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-
-// --- PATHS ---
-const THUMB_BASE = "https://jeremyryanknight2012.github.io/Terraria/thumbnails/";
-const AUDIO_BASE = "https://jeremyryanknight2012.github.io/Terraria/audio/";
-
-const assets = {};
-const sounds = {};
-let gameActive = false;
-let worldData = [];
-let camera = { x: 0, y: 0 };
-let player = { x: 0, y: 0, vx: 0, vy: 0, w: 20, h: 34, grounded: false };
-const keys = {};
-const mouse = { x: 0, y: 0, down: false };
-let selectedSlot = 0;
-let userInteracted = false;
-
-// --- AUDIO MANAGER ---
-function loadAudio() {
-    sounds.menuMusic = new Audio(AUDIO_BASE + 'menu.mp3');
-    sounds.menuMusic.loop = true;
-    sounds.menuMusic.volume = 0.4;
-
-    sounds.gameMusic = new Audio(AUDIO_BASE + 'music_overworld.mp3');
-    sounds.gameMusic.loop = true;
-    sounds.gameMusic.volume = 0.3;
-
-    sounds.mine = new Audio(AUDIO_BASE + 'sound_mine.mp3');
-    sounds.jump = new Audio(AUDIO_BASE + 'sound_jump.mp3');
-}
-
-function playSound(name) {
-    const musicSetting = localStorage.getItem('musicEnabled') !== 'false';
-    if (sounds[name] && musicSetting) {
-        const s = sounds[name].cloneNode();
-        s.volume = 0.4;
-        s.play().catch(() => {});
-    }
-}
-
-// --- ASSET LOADER ---
-function loadAssets(callback) {
-    const images = {
-        relogic1: 'relogic1.png', relogic2: 'relogic2.png', relogic3: 'relogic3.png',
-        relogic4: 'relogic4.png', relogic5: 'relogic5.png', relogic6: 'relogic6.png',
-        relogic7: 'relogic7.png', relogic8: 'relogic8.png', relogic9: 'relogic9.png',
-        relogic10: 'relogic10.png', tile1: 'tile1.png', tile2: 'tile2.png',
-        tile3: 'tile3.png', player: 'player_idle.png'
-    };
-    
-    let loaded = 0;
-    const total = Object.keys(images).length;
-    for (let key in images) {
-        assets[key] = new Image();
-        assets[key].crossOrigin = "anonymous";
-        assets[key].src = THUMB_BASE + images[key];
-        assets[key].onload = () => { if (++loaded === total) callback(); };
-        assets[key].onerror = () => { if (++loaded === total) callback(); };
-    }
-    loadAudio();
-}
-
-function showScreen(id) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    if(id !== 'none') document.getElementById(id).classList.remove('hidden');
-}
-
-function startSequence() {
+    const THUMB_BASE = "https://jeremyryanknight2012.github.io/Terraria/thumbnails/";
     const splashImg = document.getElementById('splash-img');
-    const splashKeys = ['relogic1', 'relogic2', 'relogic3', 'relogic4', 'relogic5', 'relogic6', 'relogic7', 'relogic8', 'relogic9', 'relogic10'];
-    const randomKey = splashKeys[Math.floor(Math.random() * splashKeys.length)];
-    splashImg.src = assets[randomKey].src;
+    
+    // 1. Pick a random splash (1-10)
+    const randomNum = Math.floor(Math.random() * 10) + 1;
+    
+    // Set the source
+    splashImg.src = `${THUMB_BASE}relogic${randomNum}.png`;
 
-    setTimeout(() => {
-        const musicSetting = localStorage.getItem('musicEnabled') !== 'false';
-        if(userInteracted && musicSetting) sounds.menuMusic.play().catch(() => {});
+    // 2. Animation sequence once image is loaded
+    splashImg.onload = () => {
+        // Fade In
+        splashImg.style.opacity = "1";
         
-        document.getElementById('screen-splash').style.opacity = '0';
-        setTimeout(() => showScreen('screen-menu'), 800);
-    }, 3000);
-}
+        // Wait 3.5 seconds (standard splash time)
+        setTimeout(() => {
+            // Fade Out
+            splashImg.style.opacity = "0";
+            
+            // Redirect to menu after fade finishes
+            setTimeout(() => {
+                window.location.href = "menu.html";
+            }, 1200);
+        }, 3500);
+    };
 
-function initGame(size) {
-    sounds.menuMusic.pause();
-    const musicSetting = localStorage.getItem('musicEnabled') !== 'false';
-    if(musicSetting) sounds.gameMusic.play().catch(() => {});
-    
-    showScreen('none');
-    document.getElementById('hud').style.display = 'block';
-    
-    const width = size === 'Large' ? 1500 : 800;
-    const height = 400;
-    
-    for(let x=0; x < width; x++) {
-        worldData[x] = [];
-        let surface = Math.floor(100 + Math.sin(x * 0.08) * 8);
-        for(let y=0; y < height; y++) {
-            let id = 0;
-            if (y === surface) id = 2; 
-            else if (y > surface && y < surface + 10) id = 1; 
-            else if (y >= surface + 10) id = 3;
-            worldData[x][y] = id;
-        }
-    }
-    
-    player.x = (width * 16) / 2;
-    player.y = 80 * 16;
-    gameActive = true;
-}
-
-function selectSlot(index) {
-    selectedSlot = index;
-    document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
-    document.getElementById('slot-' + index).classList.add('selected');
-}
-
-function checkCollision(x, y) {
-    let tx = Math.floor(x / 16);
-    let ty = Math.floor(y / 16);
-    return worldData[tx] && worldData[tx][ty] !== 0;
-}
-
-function update() {
-    if(!gameActive) return;
-    
-    if(keys['1']) selectSlot(0);
-    if(keys['2']) selectSlot(1);
-    if(keys['3']) selectSlot(2);
-
-    if(keys['a']) player.vx -= 0.6;
-    if(keys['d']) player.vx += 0.6;
-    if((keys['w'] || keys[' ']) && player.grounded) { 
-        player.vy = -8; 
-        player.grounded = false; 
-        playSound('jump');
-    }
-    
-    player.vy += 0.4;
-    player.vx *= 0.85;
-    
-    player.x += player.vx;
-    if(checkCollision(player.x, player.y + 2) || checkCollision(player.x + player.w, player.y + 2) ||
-       checkCollision(player.x, player.y + player.h - 2) || checkCollision(player.x + player.w, player.y + player.h - 2)) {
-        player.x -= player.vx;
-        player.vx = 0;
-    }
-
-    player.y += player.vy;
-    player.grounded = false;
-    if(checkCollision(player.x, player.y) || checkCollision(player.x + player.w, player.y) ||
-       checkCollision(player.x, player.y + player.h) || checkCollision(player.x + player.w, player.y + player.h)) {
-        if(player.vy > 0) player.grounded = true;
-        player.y -= player.vy;
-        player.vy = 0;
-    }
-
-    camera.x += (player.x - canvas.width/2 - camera.x) * 0.1;
-    camera.y += (player.y - canvas.height/2 - camera.y) * 0.1;
-
-    if(mouse.down) {
-        let mx = Math.floor((mouse.x + camera.x) / 16);
-        let my = Math.floor((mouse.y + camera.y) / 16);
-        if(worldData[mx]) {
-            if(selectedSlot === 0 && worldData[mx][my] !== 0) {
-                worldData[mx][my] = 0;
-                playSound('mine');
-            }
-            else if(selectedSlot === 1 && worldData[mx][my] === 0) worldData[mx][my] = 1;
-            else if(selectedSlot === 2 && worldData[mx][my] === 0) worldData[mx][my] = 3;
-        }
-    }
-}
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if(!gameActive) return;
-
-    ctx.fillStyle = '#5db1ff';
-    ctx.fillRect(0,0, canvas.width, canvas.height);
-
-    const sX = Math.floor(camera.x / 16);
-    const eX = sX + Math.ceil(canvas.width / 16) + 1;
-    const sY = Math.floor(camera.y / 16);
-    const eY = sY + Math.ceil(canvas.height / 16) + 1;
-
-    for(let x=sX; x<eX; x++) {
-        if(!worldData[x]) continue;
-        for(let y=sY; y<eY; y++) {
-            let id = worldData[x][y];
-            if(id === 0) continue;
-            let img = assets['tile' + id];
-            if(img && img.complete) {
-                ctx.drawImage(img, x*16 - camera.x, y*16 - camera.y, 16, 16);
-            }
-        }
-    }
-
-    if(assets.player.complete) {
-        ctx.drawImage(assets.player, player.x - camera.x, player.y - camera.y, player.w, player.h);
-    } else {
-        ctx.fillStyle = '#ff7777';
-        ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
-    }
-}
-
-window.onkeydown = e => keys[e.key.toLowerCase()] = true;
-window.onkeyup = e => keys[e.key.toLowerCase()] = false;
-window.onmousedown = () => { mouse.down = true; userInteracted = true; };
-window.onmouseup = () => mouse.down = false;
-window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
-
-function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-}
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-loadAssets(() => {
-    startSequence();
-    gameLoop();
-});
+    // Error handling in case an image link is broken
+    splashImg.onerror = () => {
+        console.error("Failed to load splash image. Redirecting to menu...");
+        window.location.href = "menu.html";
+    };
 </script>
 </body>
 </html>
