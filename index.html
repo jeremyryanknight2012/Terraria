@@ -2,203 +2,218 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Terraria JS Clone - Core Engine</title>
+    <title>Terraria Ultra-Clone (Expanded)</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-        canvas { display: block; background: #87CEEB; /* Sky Blue */ }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; text-shadow: 1px 1px 2px black; pointer-events: none; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
+        canvas { display: block; image-rendering: pixelated; }
+        #ui-overlay {
+            position: absolute; top: 10px; left: 10px; color: white;
+            pointer-events: none; user-select: none; width: 100%;
+        }
+        .bar { width: 200px; height: 20px; border: 2px solid #333; margin-bottom: 5px; background: #555; }
+        #hp-fill { width: 100%; height: 100%; background: #ff2e2e; transition: width 0.3s; }
+        #inv-window {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); border: 4px solid #555; padding: 20px;
+            display: none; pointer-events: auto;
+        }
+        .slot { width: 40px; height: 40px; border: 2px solid #888; display: inline-block; margin: 2px; text-align: center; line-height: 40px; color: yellow; font-weight: bold; }
+        .active-slot { border-color: yellow; }
     </style>
 </head>
 <body>
 
-<div id="ui">
-    <b>Terraria Clone (Core Engine)</b><br>
-    AD: Move | SPACE: Jump | LEFT CLICK: Mine | RIGHT CLICK: Place <br>
-    <span id="stats">Blocks: 0</span>
+<div id="ui-overlay">
+    <div>HP: <div class="bar"><div id="hp-fill"></div></div></div>
+    <div id="hotbar"></div>
+    <div style="margin-top:10px;"><b>E</b>: Inventory | <b>AD</b>: Move | <b>Space</b>: Jump | <b>Click</b>: Use Item</div>
 </div>
+
+<div id="inv-window">
+    <h2 style="color:white; margin-top:0;">Inventory</h2>
+    <div id="inv-grid"></div>
+</div>
+
 <canvas id="gameCanvas"></canvas>
 
 <script>
-/**
- * TERRARIA CORE ENGINE - PURE JAVASCRIPT
- * Features: Procedural Gen, Chunks, Physics, Mining/Building, Camera
+/** * TERRARIA EXPANDED CORE 
+ * Replicating: Lighting, Inventory, Combat, World Gen
  */
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const stats = { hp: 100, maxHp: 100, activeSlot: 0 };
 
-// --- CONFIGURATION ---
+// --- CONSTANTS ---
 const TILE_SIZE = 16;
-const WORLD_WIDTH = 500;  // Tiles wide
-const WORLD_HEIGHT = 200; // Tiles deep
-const CHUNK_SIZE = 16;    // For rendering optimization
-const GRAVITY = 0.4;
-const FRICTION = 0.8;
+const WORLD_W = 300;
+const WORLD_H = 150;
+const VIEW_W = window.innerWidth;
+const VIEW_H = window.innerHeight;
 
-// Tile IDs
-const AIR = 0;
-const DIRT = 1;
-const GRASS = 2;
-const STONE = 3;
-
-const COLORS = {
-    [DIRT]: '#5d4037',
-    [GRASS]: '#4caf50',
-    [STONE]: '#757575',
-    [AIR]: 'transparent'
+// --- TILE DATA ---
+const TILES = {
+    0: { name: 'Air', color: 'transparent', solid: false, light: 1.0 },
+    1: { name: 'Dirt', color: '#5d4037', solid: true, light: 0 },
+    2: { name: 'Grass', color: '#4caf50', solid: true, light: 0 },
+    3: { name: 'Stone', color: '#757575', solid: true, light: 0 },
+    4: { name: 'Torch', color: '#ff9800', solid: false, light: 1.2, emit: true }
 };
 
-// --- GAME STATE ---
+// --- GAME OBJECTS ---
 let world = [];
+let lightMap = [];
+let inventory = Array(10).fill(null).map((_, i) => ({ id: i < 3 ? i + 1 : 0, count: 1 }));
+let enemies = [];
 let camera = { x: 0, y: 0 };
-let player = {
-    x: (WORLD_WIDTH * TILE_SIZE) / 2,
-    y: 0,
-    vx: 0,
-    vy: 0,
-    width: 14,
-    height: 28,
-    grounded: false
-};
+let player = { x: (WORLD_W * TILE_SIZE)/2, y: 500, vx: 0, vy: 0, w: 16, h: 30, grounded: false };
 
-const keys = {};
-const mouse = { x: 0, y: 0, down: false, button: -1 };
-
-// --- WORLD GENERATION ---
-function generateWorld() {
-    for (let x = 0; x < WORLD_WIDTH; x++) {
+// --- WORLD GEN & LIGHTING ---
+function initWorld() {
+    for (let x = 0; x < WORLD_W; x++) {
         world[x] = [];
-        // Use a simple sine-based height map for "rolling hills"
-        let groundLevel = Math.floor(60 + Math.sin(x * 0.05) * 10 + Math.random() * 2);
-        
-        for (let y = 0; y < WORLD_HEIGHT; y++) {
-            if (y < groundLevel) {
-                world[x][y] = AIR;
-            } else if (y === groundLevel) {
-                world[x][y] = GRASS;
-            } else if (y < groundLevel + 5) {
-                world[x][y] = DIRT;
-            } else {
-                world[x][y] = STONE;
+        lightMap[x] = [];
+        let surface = Math.floor(50 + Math.sin(x * 0.1) * 5);
+        for (let y = 0; y < WORLD_H; y++) {
+            lightMap[x][y] = 0;
+            if (y < surface) world[x][y] = 0;
+            else if (y === surface) world[x][y] = 2;
+            else if (y < surface + 10) world[x][y] = 1;
+            else world[x][y] = 3;
+        }
+    }
+}
+
+function calculateLighting() {
+    // Reset light
+    for(let x=0; x<WORLD_W; x++) {
+        for(let y=0; y<WORLD_H; y++) {
+            lightMap[x][y] = (world[x][y] === 0 || y < 45) ? 1.0 : 0.1;
+            if(world[x][y] === 4) lightMap[x][y] = 1.5; 
+        }
+    }
+    // Simple 2-pass blur for light spread
+    for(let i=0; i<2; i++) {
+        for(let x=1; x<WORLD_W-1; x++) {
+            for(let y=1; y<WORLD_H-1; y++) {
+                if(world[x][y] !== 0) {
+                    lightMap[x][y] = Math.max(lightMap[x][y], (lightMap[x-1][y] + lightMap[x+1][y] + lightMap[x][y-1] + lightMap[x][y+1])/4.2);
+                }
             }
         }
     }
-    // Set player starting height
-    player.y = (60 * TILE_SIZE) - 50;
 }
 
-// --- PHYSICS & COLLISION ---
-function checkCollision(px, py) {
-    let tx = Math.floor(px / TILE_SIZE);
-    let ty = Math.floor(py / TILE_SIZE);
-    if (tx < 0 || tx >= WORLD_WIDTH || ty < 0 || ty >= WORLD_HEIGHT) return true;
-    return world[tx][ty] !== AIR;
-}
+// --- PHYSICS & LOGIC ---
+function update() {
+    // Movement
+    if (keys['a']) player.vx -= 0.5;
+    if (keys['d']) player.vx += 0.5;
+    if (keys[' '] && player.grounded) { player.vy = -7; player.grounded = false; }
 
-function updatePlayer() {
-    // Input handling
-    if (keys['a'] || keys['A']) player.vx -= 0.8;
-    if (keys['d'] || keys['D']) player.vx += 0.8;
-    if ((keys[' '] || keys['w']) && player.grounded) {
-        player.vy = -8;
-        player.grounded = false;
-    }
+    player.vy += 0.3; // Gravity
+    player.vx *= 0.8; // Friction
 
-    // Apply Physics
-    player.vy += GRAVITY;
-    player.vx *= FRICTION;
+    // Collision
+    moveAndCollide(player);
 
-    // Horizontal Collision
-    player.x += player.vx;
-    if (checkCollision(player.x, player.y) || checkCollision(player.x + player.width, player.y) ||
-        checkCollision(player.x, player.y + player.height) || checkCollision(player.x + player.width, player.y + player.height)) {
-        player.x -= player.vx;
-        player.vx = 0;
-    }
-
-    // Vertical Collision
-    player.y += player.vy;
-    player.grounded = false;
-    if (checkCollision(player.x, player.y) || checkCollision(player.x + player.width, player.y) ||
-        checkCollision(player.x, player.y + player.height) || checkCollision(player.x + player.width, player.y + player.height)) {
-        
-        if (player.vy > 0) player.grounded = true;
-        player.y -= player.vy;
-        player.vy = 0;
-    }
-
-    // Camera follow (Lerp)
-    camera.x += (player.x - canvas.width / 2 - camera.x) * 0.1;
-    camera.y += (player.y - canvas.height / 2 - camera.y) * 0.1;
-}
-
-// --- INTERACTION ---
-function handleInteraction() {
-    if (mouse.down) {
-        let worldX = Math.floor((mouse.x + camera.x) / TILE_SIZE);
-        let worldY = Math.floor((mouse.y + camera.y) / TILE_SIZE);
-
-        if (worldX >= 0 && worldX < WORLD_WIDTH && worldY >= 0 && worldY < WORLD_HEIGHT) {
-            if (mouse.button === 0) world[worldX][worldY] = AIR; // Dig
-            if (mouse.button === 2) { // Place Dirt
-                if (world[worldX][worldY] === AIR) world[worldX][worldY] = DIRT;
-            }
+    // Enemies
+    enemies.forEach(e => {
+        e.vy += 0.3;
+        e.vx = (player.x > e.x) ? 1 : -1;
+        moveAndCollide(e);
+        // Damage player
+        if(Math.abs(player.x - e.x) < 20 && Math.abs(player.y - e.y) < 20) {
+            stats.hp -= 0.5;
         }
+    });
+
+    // Camera follow
+    camera.x += (player.x - VIEW_W/2 - camera.x) * 0.1;
+    camera.y += (player.y - VIEW_H/2 - camera.y) * 0.1;
+    
+    document.getElementById('hp-fill').style.width = stats.hp + '%';
+}
+
+function moveAndCollide(obj) {
+    obj.x += obj.vx;
+    if (isSolid(obj.x, obj.y) || isSolid(obj.x + obj.w, obj.y + obj.h)) {
+        obj.x -= obj.vx; obj.vx = 0;
     }
+    obj.y += obj.vy;
+    obj.grounded = false;
+    if (isSolid(obj.x, obj.y + obj.h) || isSolid(obj.x + obj.w, obj.y + obj.h)) {
+        obj.y -= obj.vy; obj.vy = 0; obj.grounded = true;
+    }
+}
+
+function isSolid(x, y) {
+    let tx = Math.floor(x / TILE_SIZE);
+    let ty = Math.floor(y / TILE_SIZE);
+    if (!world[tx] || !world[tx][ty]) return false;
+    return TILES[world[tx][ty]].solid;
 }
 
 // --- RENDERING ---
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Render Visible Tiles
-    let startX = Math.max(0, Math.floor(camera.x / TILE_SIZE));
-    let endX = Math.min(WORLD_WIDTH, Math.ceil((camera.x + canvas.width) / TILE_SIZE));
-    let startY = Math.max(0, Math.floor(camera.y / TILE_SIZE));
-    let endY = Math.min(WORLD_HEIGHT, Math.ceil((camera.y + canvas.height) / TILE_SIZE));
+    let sX = Math.floor(camera.x / TILE_SIZE);
+    let sY = Math.floor(camera.y / TILE_SIZE);
 
-    for (let x = startX; x < endX; x++) {
-        for (let y = startY; y < endY; y++) {
-            let tile = world[x][y];
-            if (tile !== AIR) {
-                ctx.fillStyle = COLORS[tile];
-                ctx.fillRect(x * TILE_SIZE - camera.x, y * TILE_SIZE - camera.y, TILE_SIZE, TILE_SIZE);
+    for(let x = sX; x < sX + Math.ceil(VIEW_W/TILE_SIZE) + 1; x++) {
+        for(let y = sY; y < sY + Math.ceil(VIEW_H/TILE_SIZE) + 1; y++) {
+            if(!world[x] || world[x][y] === undefined) continue;
+            let tileId = world[x][y];
+            if(tileId !== 0) {
+                ctx.fillStyle = TILES[tileId].color;
+                ctx.globalAlpha = lightMap[x][y];
+                ctx.fillRect(x*TILE_SIZE - camera.x, y*TILE_SIZE - camera.y, TILE_SIZE, TILE_SIZE);
             }
         }
     }
+    ctx.globalAlpha = 1.0;
 
     // Draw Player
-    ctx.fillStyle = "#ffdbac"; // Skin tone
-    ctx.fillRect(player.x - camera.x, player.y - camera.y, player.width, player.height);
-    
-    // Draw Cursor Highlight
-    let hX = Math.floor((mouse.x + camera.x) / TILE_SIZE) * TILE_SIZE - camera.x;
-    let hY = Math.floor((mouse.y + camera.y) / TILE_SIZE) * TILE_SIZE - camera.y;
-    ctx.strokeStyle = "rgba(255,255,255,0.5)";
-    ctx.strokeRect(hX, hY, TILE_SIZE, TILE_SIZE);
+    ctx.fillStyle = 'red';
+    ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
+
+    // Draw Enemies
+    ctx.fillStyle = 'lime';
+    enemies.forEach(e => ctx.fillRect(e.x - camera.x, e.y - camera.y, 16, 16));
 }
 
-// --- MAIN LOOP ---
-function loop() {
-    updatePlayer();
-    handleInteraction();
-    draw();
-    requestAnimationFrame(loop);
+// --- INPUTS ---
+const keys = {};
+window.onkeydown = e => { 
+    keys[e.key.toLowerCase()] = true;
+    if(e.key === 'e') {
+        const win = document.getElementById('inv-window');
+        win.style.display = win.style.display === 'block' ? 'none' : 'block';
+    }
+};
+window.onkeyup = e => keys[e.key.toLowerCase()] = false;
+
+window.onmousedown = e => {
+    let wx = Math.floor((e.clientX + camera.x) / TILE_SIZE);
+    let wy = Math.floor((e.clientY + camera.y) / TILE_SIZE);
+    if(world[wx] && world[wx][wy] !== undefined) {
+        if(e.button === 0) world[wx][wy] = 0; // Break
+        else world[wx][wy] = 4; // Place Torch (Example)
+        calculateLighting();
+    }
 }
 
-// --- EVENT LISTENERS ---
-window.addEventListener('keydown', e => keys[e.key] = true);
-window.addEventListener('keyup', e => keys[e.key] = false);
-window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-window.addEventListener('mousedown', e => { mouse.down = true; mouse.button = e.button; });
-window.addEventListener('mouseup', () => mouse.down = false);
-window.oncontextmenu = (e) => e.preventDefault(); // Prevent right-click menu
+// --- INIT ---
+canvas.width = VIEW_W; canvas.height = VIEW_H;
+initWorld();
+calculateLighting();
+setInterval(() => { update(); draw(); }, 1000/60);
 
-// Initialize
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-generateWorld();
-loop();
+// Spawn a slime
+enemies.push({ x: player.x + 200, y: 400, vx: 0, vy: 0, w: 16, h: 16 });
 
 </script>
 </body>
