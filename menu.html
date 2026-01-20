@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Terraria - Main Menu</title>
     <style>
-        /* Reset and Full Screen Setup */
         * {
             margin: 0;
             padding: 0;
@@ -37,7 +36,6 @@
             image-rendering: pixelated;
         }
 
-        /* Title Image Styling */
         #game-title {
             width: 600px; 
             max-width: 80vw;
@@ -45,10 +43,8 @@
             z-index: 10;
             image-rendering: pixelated;
             filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
-            transition: transform 0.1s ease-out;
         }
 
-        /* Menu Buttons */
         .btn-container {
             display: flex;
             flex-direction: column;
@@ -66,115 +62,86 @@
             width: 350px; 
             text-align: center;
             transition: all 0.2s ease; 
-            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
             color: white;
-            text-decoration: none;
         }
 
         .btn:hover { 
             background: #4a54d1; 
             border-color: #fff; 
             transform: scale(1.05); 
-            box-shadow: 0 0 25px rgba(107, 122, 255, 0.5);
         }
 
-        /* Volume Control Overlay */
-        #volume-control {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.6);
-            padding: 10px;
-            border-radius: 8px;
+        /* Full Screen Click Overlay for Audio */
+        #audio-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
             display: flex;
             align-items: center;
-            gap: 10px;
-            z-index: 20;
+            justify-content: center;
+            cursor: pointer;
         }
 
-        #audio-prompt {
-            position: absolute;
-            bottom: 30px;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-size: 14px;
+        #audio-overlay h2 {
+            font-size: 40px;
             color: #ffd700;
-            animation: pulse 2s infinite;
-            pointer-events: none;
+            text-align: center;
+            animation: pulse 1.5s infinite;
         }
 
         @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
         }
     </style>
 </head>
 <body>
 
-    <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
-    <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
-    <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_2.png" class="menu-bg-layer" id="bg-mountains" style="opacity: 0.9;">
+    <div id="audio-overlay" onclick="startEverything()">
+        <h2>CLICK TO START GAME</h2>
+    </div>
+
+    <img src="./thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
+    <img src="./thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
+    <img src="./thumbnails/bg_2.png" class="menu-bg-layer" id="bg-mountains" style="opacity: 0.9;">
     
-    <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/title1.png" id="game-title" alt="Terraria">
+    <img src="./thumbnails/title1.png" id="game-title" alt="Terraria">
     
     <div class="btn-container">
-        <div class="btn" onclick="startNewGame()">Single Player</div>
+        <div class="btn" onclick="window.location.href='game.html'">Single Player</div>
         <div class="btn" onclick="window.location.href='settings.html'">Settings</div>
         <div class="btn" onclick="window.location.href='index.html'">Exit to Intro</div>
     </div>
 
-    <div id="audio-prompt"></div>
-
-    <div id="volume-control">
-        <span>🔊</span>
-        <input type="range" id="vol-slider" min="0" max="1" step="0.1" value="0.5">
-    </div>
-
 <script>
-    const AUDIO_BASE = "https://jeremyryanknight2012.github.io/Terraria/audio/";
-    const menuMusic = new Audio(AUDIO_BASE + 'menu.mp3');
-    menuMusic.loop = true;
-    
-    const volSlider = document.getElementById('vol-slider');
-    let musicStarted = false;
+    // Path configuration
+    const music = new Audio("./audio/menu.mp3");
+    music.loop = true;
+    music.volume = 0.5;
 
-    // Load initial volume
-    menuMusic.volume = volSlider.value;
-
-    // Check localStorage for music setting
-    const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
-
-    // Start music on first click
-    window.onclick = () => {
-        if (!musicStarted && musicEnabled) {
-            menuMusic.play().then(() => {
-                document.getElementById('audio-prompt').style.display = 'none';
-                musicStarted = true;
-            }).catch(e => console.log("Audio blocked"));
+    function startEverything() {
+        // Remove the overlay
+        document.getElementById('audio-overlay').style.display = 'none';
+        
+        // Play music
+        const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
+        if (musicEnabled) {
+            music.play().catch(err => {
+                console.error("Music file not found in /audio/ folder!");
+            });
         }
-    };
+    }
 
-    // Volume Slider Logic
-    volSlider.oninput = () => {
-        menuMusic.volume = volSlider.value;
-    };
-
-    // Parallax Effect Logic
+    // Parallax logic
     window.onmousemove = (e) => {
         const x = (e.clientX / window.innerWidth) - 0.5;
         const y = (e.clientY / window.innerHeight) - 0.5;
-
         document.getElementById('bg-clouds').style.transform = `translate(${x * 20}px, ${y * 10}px)`;
         document.getElementById('bg-mountains').style.transform = `translate(${x * 40}px, ${y * 20}px)`;
         document.getElementById('game-title').style.transform = `translate(${x * 15}px, ${y * 5}px)`;
     };
-
-    function startNewGame() {
-        menuMusic.pause();
-        window.location.href = "game.html";
-    }
 </script>
 </body>
 </html>
