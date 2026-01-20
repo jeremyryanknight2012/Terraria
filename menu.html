@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Terraria - Main Menu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -10,9 +11,7 @@
             margin: 0; 
             overflow: hidden; 
             background: #000; 
-            /* Font stack designed to match the 'Andy Bold' look in the screenshots */
-            font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", "Comic Neue", sans-serif; 
-            color: white; 
+            font-family: 'Patrick Hand', cursive; /* Exact style match */
             user-select: none; 
             display: flex; 
             flex-direction: column; 
@@ -21,7 +20,7 @@
             height: 100vh; 
         }
 
-        /* Parallax Background Layers */
+        /* Parallax Backgrounds */
         .menu-bg-layer { 
             position: absolute; 
             width: 110%; 
@@ -33,84 +32,84 @@
             image-rendering: pixelated;
         }
 
-        #game-title { 
-            width: 600px; 
-            max-width: 80vw; 
-            margin-bottom: 40px; 
-            z-index: 10; 
-            image-rendering: pixelated; 
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); 
-        }
-
         .btn-container { 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
-            gap: 2px; /* Tight gap to match Terraria menu style */
+            gap: 0px; /* Terraria menus have very tight vertical spacing */
             z-index: 10; 
         }
 
-        /* THE BUTTON LOGIC */
+        /* THE EXACT BUTTON STYLE */
         .menu-btn {
-            font-size: 52px;
-            font-weight: bold;
-            color: #808080; /* Gray when not hovering */
+            font-size: 58px; /* Matching the large scale in the screenshot */
+            font-weight: 400;
+            color: #808080; /* The exact gray from screenshot 171706 */
             cursor: pointer;
-            /* Smoothly transitions both size and color over 0.15 seconds */
-            transition: transform 0.15s ease-out, color 0.15s ease-out; 
-            text-shadow: 3px 3px 2px rgba(0,0,0,0.8);
-            background: none;
             border: none;
+            background: none;
             outline: none;
-            padding: 5px 20px;
-            /* Ensures the font looks thick and smooth */
-            -webkit-font-smoothing: antialiased;
+            padding: 0px 20px;
+            transition: transform 0.1s ease-out, color 0.1s ease-out;
+            
+            /* The thick black outline seen in the screenshots */
+            text-shadow: 
+                -2px -2px 0 #000,  
+                 2px -2px 0 #000,
+                -2px  2px 0 #000,
+                 2px  2px 0 #000,
+                 3px  3px 5px rgba(0,0,0,0.8);
         }
 
-        /* Hover effect: Enlarge and turn Yellow as per your screenshots */
+        /* THE EXACT HOVER STYLE */
         .menu-btn:hover {
-            color: #ffff00; /* Bright yellow */
-            transform: scale(1.15); /* Makes the button grow */
+            color: #ffeb00; /* The exact bright yellow from screenshot 171719 */
+            transform: scale(1.18); /* Exact growth factor */
+            /* Stronger shadow when hovering */
+            text-shadow: 
+                -3px -3px 0 #000,  
+                 3px -3px 0 #000,
+                -3px  3px 0 #000,
+                 3px  3px 0 #000;
         }
 
-        /* Slight "squish" effect when clicking for extra juice */
         .menu-btn:active {
-            transform: scale(1.05);
+            transform: scale(1.1);
         }
     </style>
 </head>
 <body>
 
     <img src="./thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
-    <img src="./thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
-    <img src="./thumbnails/bg_2.png" class="menu-bg-layer" id="bg-mountains" style="opacity: 0.9;">
+    <img src="./thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds">
+    <img src="./thumbnails/bg_2.png" class="menu-bg-layer" id="bg-mountains">
     
-    <img src="./thumbnails/title1.png" id="game-title" alt="Terraria">
+    <img src="./thumbnails/title1.png" style="width: 600px; margin-bottom: 20px; z-index: 10;">
     
     <div class="btn-container">
         <button class="menu-btn" onclick="startSinglePlayer()">Single Player</button>
         <button class="menu-btn" onclick="navTo('multiplayer.html')">Multiplayer</button>
+        <button class="menu-btn" onclick="navTo('achievements.html')">Achievements</button>
+        <button class="menu-btn" onclick="navTo('workshop.html')">Workshop</button>
         <button class="menu-btn" onclick="navTo('settings.html')">Settings</button>
+        <button class="menu-btn" onclick="navTo('credits.html')">Credits</button>
         <button class="menu-btn" onclick="navTo('index.html')">Exit</button>
     </div>
 
 <script>
-    // Audio Setup
     const music = new Audio("./audio/menu.mp3");
     music.loop = true;
     music.volume = localStorage.getItem('musicVolume') || 0.5;
 
-    // Load music preference and timestamp
     window.addEventListener('load', () => {
         const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
         if (musicEnabled) {
             const savedTime = localStorage.getItem('menuMusicTime');
             if (savedTime) music.currentTime = parseFloat(savedTime);
-            music.play().catch(e => console.log("User interaction required for audio"));
+            music.play();
         }
     });
 
-    // Save music time and navigate
     function startSinglePlayer() {
         localStorage.setItem('menuMusicTime', music.currentTime);
         window.location.href = "character.html";
@@ -121,15 +120,11 @@
         window.location.href = url;
     }
 
-    // Parallax Mouse Movement
     window.onmousemove = (e) => {
         const x = (e.clientX / window.innerWidth) - 0.5;
         const y = (e.clientY / window.innerHeight) - 0.5;
-        
-        // Clouds move slower, mountains move faster to create depth
-        document.getElementById('bg-clouds').style.transform = `translate(${x * 20}px, ${y * 10}px)`;
-        document.getElementById('bg-mountains').style.transform = `translate(${x * 40}px, ${y * 20}px)`;
-        document.getElementById('game-title').style.transform = `translate(${x * 15}px, ${y * 5}px)`;
+        document.getElementById('bg-clouds').style.transform = `translate(${x * 15}px, ${y * 8}px)`;
+        document.getElementById('bg-mountains').style.transform = `translate(${x * 30}px, ${y * 15}px)`;
     };
 </script>
 </body>
