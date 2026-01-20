@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Terraria - Select Player</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            margin: 0; overflow: hidden; background: #000; 
+            font-family: 'Arial', sans-serif; color: white; 
+            user-select: none; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; height: 100vh; 
+        }
+        .menu-bg-layer { 
+            position: absolute; width: 110%; height: 110%; top: -5%; left: -5%; 
+            object-fit: cover; z-index: -1; image-rendering: pixelated;
+        }
+
+        #player-list {
+            width: 720px; max-height: 500px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 10px; z-index: 10;
+            padding-right: 10px;
+        }
+
+        .player-card {
+            background: #3c4491; border: 3px solid #1a1e4d;
+            padding: 10px; display: flex; flex-direction: column;
+        }
+        .card-top { display: flex; gap: 12px; }
+        .char-box {
+            width: 64px; height: 74px; background: #2a316d;
+            border: 2px solid #1a1e4d; display: flex; align-items: center; justify-content: center;
+        }
+        .char-box img { width: 44px; image-rendering: pixelated; }
+
+        .info-area { flex: 1; }
+        .char-name { font-size: 26px; font-family: 'Times New Roman', serif; margin-bottom: 5px; text-shadow: 2px 2px #000; }
+        .divider { border: 0; border-top: 2px solid #1a1e4d; margin-bottom: 8px; }
+
+        .stats-row { display: flex; gap: 8px; }
+        .stat-panel {
+            background: #2a316d; border: 1px solid #1a1e4d;
+            padding: 4px 12px; font-size: 18px; display: flex; align-items: center; gap: 6px;
+        }
+
+        .mode-Hardcore { color: #ff4d4d; font-weight: bold; }
+        .mode-Classic { color: #ffffff; font-weight: bold; }
+        .mode-Journey { color: #ff80ff; font-weight: bold; }
+        .mode-Mediumcore { color: #ffaa00; font-weight: bold; }
+
+        .card-actions { display: flex; justify-content: space-between; margin-top: 10px; }
+        .icon-btns { display: flex; gap: 4px; }
+        .s-btn {
+            width: 28px; height: 28px; background: #2a316d; border: 1px solid #1a1e4d;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; color: #5adada;
+        }
+        .trash-btn { cursor: pointer; filter: brightness(0.8); transition: 0.2s; }
+        .trash-btn:hover { filter: brightness(1.2); transform: scale(1.1); }
+
+        .nav-footer { display: flex; gap: 20px; margin-top: 30px; z-index: 10; width: 720px; }
+        .btn { 
+            flex: 1; background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff; 
+            padding: 12px; cursor: pointer; font-size: 32px; color: white;
+            font-family: 'Times New Roman', serif; text-align: center; text-shadow: 2px 2px #000;
+        }
+        .btn:hover { color: #ffd700; border-color: white; }
+
+        #player-list::-webkit-scrollbar { width: 8px; }
+        #player-list::-webkit-scrollbar-thumb { background: #6b7aff; border: 1px solid #1a1e4d; }
+    </style>
+</head>
+<body>
+
+    <img src="./thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
+    <img src="./thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
+    <img src="./thumbnails/bg_2.png" class="menu-bg-layer" id="bg-mountains" style="opacity: 0.9;">
+
+    <div id="player-list"></div>
+
+    <div class="nav-footer">
+        <div class="btn" onclick="navTo('menu.html')">Back</div>
+        <div class="btn" onclick="navTo('character1.html')">New</div>
+    </div>
+
+<script>
+    const music = new Audio("./audio/menu.mp3");
+    music.loop = true;
+    music.volume = localStorage.getItem('musicVolume') || 0.5;
+
+    window.addEventListener('load', () => {
+        const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
+        if (musicEnabled) {
+            const savedTime = localStorage.getItem('menuMusicTime');
+            if (savedTime) music.currentTime = parseFloat(savedTime);
+            music.play();
+        }
+        renderPlayers();
+    });
+
+    function navTo(url) {
+        localStorage.setItem('menuMusicTime', music.currentTime);
+        window.location.href = url;
+    }
+
+    function renderPlayers() {
+        const list = document.getElementById('player-list');
+        const players = JSON.parse(localStorage.getItem('terraria_players') || '[]');
+
+        if (players.length === 0) {
+            list.innerHTML = `<p style="text-align:center; font-size:28px; color:#aaa; text-shadow: 2px 2px #000;">No Characters Found</p>`;
+            return;
+        }
+
+        list.innerHTML = players.map((p, i) => `
+            <div class="player-card">
+                <div class="card-top">
+                    <div class="char-box"><img src="./thumbnails/${p.icon}.png"></div>
+                    <div class="info-area">
+                        <div class="char-name">${p.name}</div>
+                        <hr class="divider">
+                        <div class="stats-row">
+                            <div class="stat-panel"><span style="color:#ff4d4d">❤</span> 100 HP <span style="color:#4d88ff">⭐</span> 20 MP</div>
+                            <div class="stat-panel"><span class="mode-${p.mode}">${p.mode}</span></div>
+                            <div class="stat-panel">00:00:00</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <div class="icon-btns">
+                        <div class="s-btn">▶</div>
+                        <div class="s-btn">⭐</div>
+                        <div class="s-btn">☁</div>
+                        <div class="s-btn">⚙</div>
+                    </div>
+                    <div class="trash-btn" onclick="deleteChar(${i})">🗑️</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function deleteChar(index) {
+        if(confirm("Are you sure you want to delete this character?")) {
+            let p = JSON.parse(localStorage.getItem('terraria_players'));
+            p.splice(index, 1);
+            localStorage.setItem('terraria_players', JSON.stringify(p));
+            renderPlayers();
+        }
+    }
+
+    window.onmousemove = (e) => {
+        const x = (e.clientX / window.innerWidth) - 0.5;
+        const y = (e.clientY / window.innerHeight) - 0.5;
+        document.getElementById('bg-clouds').style.transform = `translate(${x * 20}px, ${y * 10}px)`;
+        document.getElementById('bg-mountains').style.transform = `translate(${x * 40}px, ${y * 20}px)`;
+    };
+</script>
+</body>
+</html>
