@@ -39,7 +39,7 @@
 
         /* Title Image Styling */
         #game-title {
-            width: 600px; /* Adjust size as needed */
+            width: 600px; 
             max-width: 80vw;
             margin-bottom: 40px;
             z-index: 10;
@@ -78,7 +78,20 @@
             box-shadow: 0 0 25px rgba(107, 122, 255, 0.5);
         }
 
-        /* Interaction Prompt */
+        /* Volume Control Overlay */
+        #volume-control {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 20;
+        }
+
         #audio-prompt {
             position: absolute;
             bottom: 30px;
@@ -109,18 +122,25 @@
     <div class="btn-container">
         <div class="btn" onclick="startNewGame()">Single Player</div>
         <div class="btn" onclick="window.location.href='settings.html'">Settings</div>
-        <div class="btn" onclick="window.location.href='index.html'">Exit to Intro</div>
     </div>
 
-    <div id="audio-prompt">CLICK ANYWHERE TO START MUSIC</div>
+    <div id="audio-prompt"></div>
+
+    <div id="volume-control">
+        <span>🔊</span>
+        <input type="range" id="vol-slider" min="0" max="1" step="0.1" value="0.5">
+    </div>
 
 <script>
     const AUDIO_BASE = "https://jeremyryanknight2012.github.io/Terraria/audio/";
     const menuMusic = new Audio(AUDIO_BASE + 'menu.mp3');
     menuMusic.loop = true;
-    menuMusic.volume = 0.5;
-
+    
+    const volSlider = document.getElementById('vol-slider');
     let musicStarted = false;
+
+    // Load initial volume
+    menuMusic.volume = volSlider.value;
 
     // Check localStorage for music setting
     const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
@@ -128,10 +148,16 @@
     // Start music on first click
     window.onclick = () => {
         if (!musicStarted && musicEnabled) {
-            menuMusic.play().catch(e => console.log("Audio play blocked"));
-            document.getElementById('audio-prompt').style.display = 'none';
-            musicStarted = true;
+            menuMusic.play().then(() => {
+                document.getElementById('audio-prompt').style.display = 'none';
+                musicStarted = true;
+            }).catch(e => console.log("Audio blocked"));
         }
+    };
+
+    // Volume Slider Logic
+    volSlider.oninput = () => {
+        menuMusic.volume = volSlider.value;
     };
 
     // Parallax Effect Logic
@@ -139,7 +165,6 @@
         const x = (e.clientX / window.innerWidth) - 0.5;
         const y = (e.clientY / window.innerHeight) - 0.5;
 
-        // Move layers and Title at different speeds
         document.getElementById('bg-clouds').style.transform = `translate(${x * 20}px, ${y * 10}px)`;
         document.getElementById('bg-mountains').style.transform = `translate(${x * 40}px, ${y * 20}px)`;
         document.getElementById('game-title').style.transform = `translate(${x * 15}px, ${y * 5}px)`;
