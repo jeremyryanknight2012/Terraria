@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Terraria JS Clone - Core Engine</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        canvas { display: block; background: #87CEEB; /* Sky Blue */ }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; text-shadow: 1px 1px 2px black; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <b>Terraria Clone (Core Engine)</b><br>
+    AD: Move | SPACE: Jump | LEFT CLICK: Mine | RIGHT CLICK: Place <br>
+    <span id="stats">Blocks: 0</span>
+</div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+/**
+ * TERRARIA CORE ENGINE - PURE JAVASCRIPT
+ * Features: Procedural Gen, Chunks, Physics, Mining/Building, Camera
+ */
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// --- CONFIGURATION ---
+const TILE_SIZE = 16;
+const WORLD_WIDTH = 500;  // Tiles wide
+const WORLD_HEIGHT = 200; // Tiles deep
+const CHUNK_SIZE = 16;    // For rendering optimization
+const GRAVITY = 0.4;
+const FRICTION = 0.8;
+
+// Tile IDs
+const AIR = 0;
+const DIRT = 1;
+const GRASS = 2;
+const STONE = 3;
+
+const COLORS = {
+    [DIRT]: '#5d4037',
+    [GRASS]: '#4caf50',
+    [STONE]: '#757575',
+    [AIR]: 'transparent'
+};
+
+// --- GAME STATE ---
+let world = [];
+let camera = { x: 0, y: 0 };
+let player = {
+    x: (WORLD_WIDTH * TILE_SIZE) / 2,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    width: 14,
+    height: 28,
+    grounded: false
+};
+
+const keys = {};
+const mouse = { x: 0, y: 0, down: false, button: -1 };
+
+// --- WORLD GENERATION ---
+function generateWorld() {
+    for (let x = 0; x < WORLD_WIDTH; x++) {
+        world[x] = [];
+        // Use a simple sine-based height map for "rolling hills"
+        let groundLevel = Math.floor(60 + Math.sin(x * 0.05) * 10 + Math.random() * 2);
+        
+        for (let y = 0; y < WORLD_HEIGHT; y++) {
+            if (y < groundLevel) {
+                world[x][y] = AIR;
+            } else if (y === groundLevel) {
+                world[x][y] = GRASS;
+            } else if (y < groundLevel + 5) {
+                world[x][y] = DIRT;
+            } else {
+                world[x][y] = STONE;
+            }
+        }
+    }
+    // Set player starting height
+    player.y = (60 * TILE_SIZE) - 50;
+}
+
+// --- PHYSICS & COLLISION ---
+function checkCollision(px, py) {
+    let tx = Math.floor(px / TILE_SIZE);
+    let ty = Math.floor(py / TILE_SIZE);
+    if (tx < 0 || tx >= WORLD_WIDTH || ty < 0 || ty >= WORLD_HEIGHT) return true;
+    return world[tx][ty] !== AIR;
+}
+
+function updatePlayer() {
+    // Input handling
+    if (keys['a'] || keys['A']) player.vx -= 0.8;
+    if (keys['d'] || keys['D']) player.vx += 0.8;
+    if ((keys[' '] || keys['w']) && player.grounded) {
+        player.vy = -8;
+        player.grounded = false;
+    }
+
+    // Apply Physics
+    player.vy += GRAVITY;
+    player.vx *= FRICTION;
+
+    // Horizontal Collision
+    player.x += player.vx;
+    if (checkCollision(player.x, player.y) || checkCollision(player.x + player.width, player.y) ||
+        checkCollision(player.x, player.y + player.height) || checkCollision(player.x + player.width, player.y + player.height)) {
+        player.x -= player.vx;
+        player.vx = 0;
+    }
+
+    // Vertical Collision
+    player.y += player.vy;
+    player.grounded = false;
+    if (checkCollision(player.x, player.y) || checkCollision(player.x + player.width, player.y) ||
+        checkCollision(player.x, player.y + player.height) || checkCollision(player.x + player.width, player.y + player.height)) {
+        
+        if (player.vy > 0) player.grounded = true;
+        player.y -= player.vy;
+        player.vy = 0;
+    }
+
+    // Camera follow (Lerp)
+    camera.x += (player.x - canvas.width / 2 - camera.x) * 0.1;
+    camera.y += (player.y - canvas.height / 2 - camera.y) * 0.1;
+}
+
+// --- INTERACTION ---
+function handleInteraction() {
+    if (mouse.down) {
+        let worldX = Math.floor((mouse.x + camera.x) / TILE_SIZE);
+        let worldY = Math.floor((mouse.y + camera.y) / TILE_SIZE);
+
+        if (worldX >= 0 && worldX < WORLD_WIDTH && worldY >= 0 && worldY < WORLD_HEIGHT) {
+            if (mouse.button === 0) world[worldX][worldY] = AIR; // Dig
+            if (mouse.button === 2) { // Place Dirt
+                if (world[worldX][worldY] === AIR) world[worldX][worldY] = DIRT;
+            }
+        }
+    }
+}
+
+// --- RENDERING ---
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Render Visible Tiles
+    let startX = Math.max(0, Math.floor(camera.x / TILE_SIZE));
+    let endX = Math.min(WORLD_WIDTH, Math.ceil((camera.x + canvas.width) / TILE_SIZE));
+    let startY = Math.max(0, Math.floor(camera.y / TILE_SIZE));
+    let endY = Math.min(WORLD_HEIGHT, Math.ceil((camera.y + canvas.height) / TILE_SIZE));
+
+    for (let x = startX; x < endX; x++) {
+        for (let y = startY; y < endY; y++) {
+            let tile = world[x][y];
+            if (tile !== AIR) {
+                ctx.fillStyle = COLORS[tile];
+                ctx.fillRect(x * TILE_SIZE - camera.x, y * TILE_SIZE - camera.y, TILE_SIZE, TILE_SIZE);
+            }
+        }
+    }
+
+    // Draw Player
+    ctx.fillStyle = "#ffdbac"; // Skin tone
+    ctx.fillRect(player.x - camera.x, player.y - camera.y, player.width, player.height);
+    
+    // Draw Cursor Highlight
+    let hX = Math.floor((mouse.x + camera.x) / TILE_SIZE) * TILE_SIZE - camera.x;
+    let hY = Math.floor((mouse.y + camera.y) / TILE_SIZE) * TILE_SIZE - camera.y;
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.strokeRect(hX, hY, TILE_SIZE, TILE_SIZE);
+}
+
+// --- MAIN LOOP ---
+function loop() {
+    updatePlayer();
+    handleInteraction();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+// --- EVENT LISTENERS ---
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener('mousedown', e => { mouse.down = true; mouse.button = e.button; });
+window.addEventListener('mouseup', () => mouse.down = false);
+window.oncontextmenu = (e) => e.preventDefault(); // Prevent right-click menu
+
+// Initialize
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+generateWorld();
+loop();
+
+</script>
+</body>
+</html>
