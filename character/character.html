@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Terraria - Select Player</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #000 url('./thumbnails/bg_2.png') no-repeat center center fixed; 
+            background-size: cover;
+            font-family: 'Arial', sans-serif; color: white; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; 
+        }
+        h1 { font-size: 48px; text-shadow: 4px 4px #000; margin-bottom: 30px; color: #a2ffaf; }
+        
+        #player-list {
+            width: 500px; max-height: 400px; overflow-y: auto;
+            background: rgba(0, 0, 0, 0.7); border: 2px solid #555;
+            padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;
+        }
+
+        .player-card {
+            background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff;
+            padding: 15px; display: flex; align-items: center; gap: 15px;
+            cursor: pointer; transition: 0.2s;
+        }
+        .player-card:hover { background: #4a54d1; border-color: #fff; }
+        .player-card img { width: 40px; image-rendering: pixelated; }
+
+        .controls { display: flex; gap: 20px; }
+        .btn { 
+            background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff; 
+            padding: 10px 40px; cursor: pointer; font-size: 20px;
+            color: white; text-align: center; transition: 0.2s;
+        }
+        .btn:hover { background: #4a54d1; border-color: #fff; transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <h1>Select Player</h1>
+
+    <div id="player-list">
+        </div>
+
+    <div class="controls">
+        <div class="btn" onclick="window.location.href='menu.html'">Back</div>
+        <div class="btn" onclick="window.location.href='./character/character.html'">New</div>
+    </div>
+
+<script>
+    function loadCharacters() {
+        const container = document.getElementById('player-list');
+        const players = JSON.parse(localStorage.getItem('terraria_players') || '[]');
+
+        if (players.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#888;">No characters found.</p>';
+            return;
+        }
+
+        container.innerHTML = players.map(p => `
+            <div class="player-card">
+                <img src="./thumbnails/${p.icon}.png">
+                <div>
+                    <div style="font-weight:bold; font-size:20px;">${p.name}</div>
+                    <div style="font-size:14px; color:#ffd700;">${p.mode} Mode</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    window.onload = loadCharacters;
+</script>
+</body>
+</html>
