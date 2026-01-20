@@ -5,69 +5,28 @@
     <title>Terraria - Main Menu</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body { 
-            margin: 0; 
-            overflow: hidden; 
-            background: #000; 
-            font-family: 'Arial', sans-serif; 
-            color: white; 
-            user-select: none; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
+            margin: 0; overflow: hidden; background: #000; 
+            font-family: 'Arial', sans-serif; color: white; 
+            user-select: none; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; height: 100vh; 
         }
-
         .menu-bg-layer { 
-            position: absolute; 
-            width: 110%; 
-            height: 110%; 
-            top: -5%; 
-            left: -5%; 
-            object-fit: cover; 
-            z-index: -1; 
-            image-rendering: pixelated;
+            position: absolute; width: 110%; height: 110%; top: -5%; left: -5%; 
+            object-fit: cover; z-index: -1; image-rendering: pixelated;
         }
-
-        #game-title {
-            width: 600px; 
-            max-width: 80vw;
-            margin-bottom: 40px;
-            z-index: 10;
-            image-rendering: pixelated;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
-        }
-
-        .btn-container {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            z-index: 10;
-        }
-
+        #game-title { width: 600px; max-width: 80vw; margin-bottom: 40px; z-index: 10; image-rendering: pixelated; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); }
+        .btn-container { display: flex; flex-direction: column; gap: 15px; z-index: 10; }
         .btn { 
-            background: rgba(35, 40, 90, 0.9); 
-            border: 2px solid #6b7aff; 
-            padding: 15px 60px; 
-            cursor: pointer; 
-            font-size: 26px;
-            text-shadow: 2px 2px #000; 
-            width: 350px; 
-            text-align: center;
-            transition: all 0.2s ease; 
-            color: white;
+            background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff; 
+            padding: 15px 60px; cursor: pointer; font-size: 26px;
+            text-shadow: 2px 2px #000; width: 350px; text-align: center;
+            transition: all 0.2s ease; color: white;
         }
-
-        .btn:hover { 
-            background: #4a54d1; 
-            border-color: #fff; 
-            transform: scale(1.05); 
-        }
+        .btn:hover { background: #4a54d1; border-color: #fff; transform: scale(1.05); }
     </style>
 </head>
-<body onclick="checkAndPlay()">
+<body onclick="syncMusic()">
 
     <img src="./thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
     <img src="./thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
@@ -86,24 +45,33 @@
     music.loop = true;
     music.volume = 0.5;
 
-    function checkAndPlay() {
+    function syncMusic() {
         const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
         if (musicEnabled && music.paused) {
+            // Pick up where index.html left off
+            const savedTime = localStorage.getItem('menuMusicTime');
+            if (savedTime) {
+                music.currentTime = parseFloat(savedTime);
+            }
             music.play();
         }
     }
 
     window.addEventListener('load', () => {
-        // If index.html already started the music, try to play it here automatically
         const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
         if (musicEnabled) {
+            const savedTime = localStorage.getItem('menuMusicTime');
+            if (savedTime) {
+                music.currentTime = parseFloat(savedTime);
+            }
+            // Try to autoplay since the user already clicked on index.html
             music.play().catch(() => {
-                console.log("Waiting for interaction to resume music.");
+                console.log("Browser blocked autoplay transition. Click once to sync.");
             });
         }
     });
 
-    // Parallax logic
+    // Parallax
     window.onmousemove = (e) => {
         const x = (e.clientX / window.innerWidth) - 0.5;
         const y = (e.clientY / window.innerHeight) - 0.5;
