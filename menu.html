@@ -15,11 +15,7 @@
             position: absolute; width: 110%; height: 110%; top: -5%; left: -5%; 
             object-fit: cover; z-index: -1; image-rendering: pixelated;
         }
-        #game-title { 
-            width: 600px; max-width: 80vw; margin-bottom: 40px; 
-            z-index: 10; image-rendering: pixelated; 
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); 
-        }
+        #game-title { width: 600px; max-width: 80vw; margin-bottom: 40px; z-index: 10; image-rendering: pixelated; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); }
         .btn-container { display: flex; flex-direction: column; gap: 15px; z-index: 10; }
         .btn { 
             background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff; 
@@ -39,26 +35,34 @@
     <img src="./thumbnails/title1.png" id="game-title" alt="Terraria">
     
     <div class="btn-container">
-        <div class="btn" onclick="window.location.href='game.html'">Single Player</div>
-        <div class="btn" onclick="window.location.href='settings.html'">Settings</div>
-        <div class="btn" onclick="window.location.href='index.html'">Exit to Intro</div>
+        <div class="btn" onclick="startSinglePlayer()">Single Player</div>
+        <div class="btn" onclick="navTo('settings.html')">Settings</div>
+        <div class="btn" onclick="navTo('index.html')">Exit to Intro</div>
     </div>
 
 <script>
     const music = new Audio("./audio/menu.mp3");
     music.loop = true;
-    music.volume = 0.5;
+    music.volume = localStorage.getItem('musicVolume') || 0.5;
 
     window.addEventListener('load', () => {
         const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
         if (musicEnabled) {
             const savedTime = localStorage.getItem('menuMusicTime');
-            if (savedTime) {
-                music.currentTime = parseFloat(savedTime);
-            }
-            music.play().catch(e => console.log("Music blocked"));
+            if (savedTime) music.currentTime = parseFloat(savedTime);
+            music.play().catch(e => console.log("Click to resume music"));
         }
     });
+
+    function startSinglePlayer() {
+        localStorage.setItem('menuMusicTime', music.currentTime);
+        window.location.href = "character.html";
+    }
+
+    function navTo(url) {
+        localStorage.setItem('menuMusicTime', music.currentTime);
+        window.location.href = url;
+    }
 
     window.onmousemove = (e) => {
         const x = (e.clientX / window.innerWidth) - 0.5;
