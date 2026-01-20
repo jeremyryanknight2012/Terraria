@@ -30,26 +30,40 @@
     music.loop = true;
     music.volume = 0.5;
 
+    let hasRedirected = false;
+
     function startAudio() {
         const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
         if (musicEnabled && music.paused) {
             music.play();
         }
     }
+
+    // Monitor playback time for the transition
+    music.addEventListener('timeupdate', () => {
+        // Start fading out the image slightly before the 9s mark
+        if (music.currentTime >= 8.2 && !hasRedirected) {
+            splashImg.style.opacity = "0";
+        }
+
+        // Trigger redirect exactly at 9 seconds
+        if (music.currentTime >= 9.0 && !hasRedirected) {
+            hasRedirected = true;
+            localStorage.setItem('menuMusicTime', music.currentTime);
+            window.location.href = "menu.html";
+        }
+    });
     
     const randomNum = Math.floor(Math.random() * 10) + 1;
     splashImg.src = `${THUMB_BASE}relogic${randomNum}.png`;
 
     splashImg.onload = () => {
         splashImg.style.opacity = "1";
-        setTimeout(() => {
-            splashImg.style.opacity = "0";
-            setTimeout(() => {
-                // SAVE THE CURRENT TIME BEFORE LEAVING
-                localStorage.setItem('menuMusicTime', music.currentTime);
-                window.location.href = "menu.html";
-            }, 1200);
-        }, 3500);
+    };
+
+    splashImg.onerror = () => { 
+        // Fallback if music fails or image fails
+        setTimeout(() => { window.location.href = "menu.html"; }, 5000); 
     };
 </script>
 </body>
