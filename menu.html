@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Terraria - Main Menu</title>
+    <style>
+        /* Reset and Full Screen Setup */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #000; 
+            font-family: 'Arial', sans-serif; 
+            color: white; 
+            user-select: none; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+        }
+
+        /* Parallax Background Layers */
+        .menu-bg-layer { 
+            position: absolute; 
+            width: 110%; 
+            height: 110%; 
+            top: -5%; 
+            left: -5%; 
+            object-fit: cover; 
+            z-index: -1; 
+            image-rendering: pixelated;
+        }
+
+        /* Title Styling */
+        h1 { 
+            font-size: 100px; 
+            margin-bottom: 50px; 
+            text-shadow: 8px 8px #000; 
+            color: #a2ffaf; 
+            letter-spacing: 8px; 
+            z-index: 10;
+        }
+
+        /* Menu Buttons */
+        .btn-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .btn { 
+            background: rgba(35, 40, 90, 0.9); 
+            border: 2px solid #6b7aff; 
+            padding: 15px 60px; 
+            cursor: pointer; 
+            font-size: 26px;
+            text-shadow: 2px 2px #000; 
+            width: 350px; 
+            text-align: center;
+            transition: all 0.2s ease; 
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn:hover { 
+            background: #4a54d1; 
+            border-color: #fff; 
+            transform: scale(1.05); 
+            box-shadow: 0 0 25px rgba(107, 122, 255, 0.5);
+        }
+
+        /* Interaction Prompt */
+        #audio-prompt {
+            position: absolute;
+            bottom: 30px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #ffd700;
+            animation: pulse 2s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+
+    <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
+    <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
+    <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_2.png" class="menu-bg-layer" id="bg-mountains" style="opacity: 0.9;">
+    
+    <h1>Terraria</h1>
+    
+    <div class="btn-container">
+        <div class="btn" onclick="startNewGame()">Single Player</div>
+        <div class="btn" onclick="window.location.href='settings.html'">Settings</div>
+        <div class="btn" onclick="window.location.href='index.html'">Exit to Intro</div>
+    </div>
+
+    <div id="audio-prompt">CLICK ANYWHERE TO START MUSIC</div>
+
+<script>
+    const AUDIO_BASE = "https://jeremyryanknight2012.github.io/Terraria/audio/";
+    const menuMusic = new Audio(AUDIO_BASE + 'menu.mp3');
+    menuMusic.loop = true;
+    menuMusic.volume = 0.5;
+
+    let musicStarted = false;
+
+    // Check localStorage for music setting
+    const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
+
+    // Start music on first click (Browser Safety Policy)
+    window.onclick = () => {
+        if (!musicStarted && musicEnabled) {
+            menuMusic.play().catch(e => console.log("Audio play blocked"));
+            document.getElementById('audio-prompt').style.display = 'none';
+            musicStarted = true;
+        }
+    };
+
+    // Parallax Effect Logic
+    window.onmousemove = (e) => {
+        const x = (e.clientX / window.innerWidth) - 0.5;
+        const y = (e.clientY / window.innerHeight) - 0.5;
+
+        // Move layers at different speeds
+        document.getElementById('bg-clouds').style.transform = `translate(${x * 20}px, ${y * 10}px)`;
+        document.getElementById('bg-mountains').style.transform = `translate(${x * 40}px, ${y * 20}px)`;
+    };
+
+    function startNewGame() {
+        // Stop menu music before entering game
+        menuMusic.pause();
+        // Redirect to your game engine file
+        window.location.href = "game.html";
+    }
+</script>
+</body>
+</html>
