@@ -7,11 +7,9 @@
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; color: white; user-select: none; }
         canvas { display: block; image-rendering: pixelated; }
         
-        /* UI Layers */
         .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; transition: opacity 0.8s; z-index: 20; }
         .hidden { display: none !important; }
         
-        /* Menu Visuals */
         #screen-menu { background: #000; overflow: hidden; }
         .menu-bg-layer { position: absolute; width: 110%; height: 110%; top: -5%; left: -5%; object-fit: cover; z-index: -1; }
         
@@ -25,8 +23,8 @@
 
         #hud { position: absolute; top: 20px; left: 20px; pointer-events: none; display: none; z-index: 10; }
         .hotbar { display: flex; gap: 8px; }
-        .slot { width: 48px; height: 48px; background: rgba(0,0,0,0.7); border: 2px solid #aaa; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .selected { border-color: #ffd700; box-shadow: 0 0 15px #ffd700; }
+        .slot { width: 48px; height: 48px; background: rgba(0,0,0,0.7); border: 2px solid #aaa; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: 0.1s; }
+        .selected { border-color: #ffd700; box-shadow: 0 0 15px #ffd700; transform: scale(1.1); background: rgba(60, 60, 120, 0.8); }
     </style>
 </head>
 <body>
@@ -60,19 +58,15 @@
 
     <div id="hud">
         <div class="hotbar">
-            <div class="slot selected">⛏️</div>
-            <div class="slot">🗡️</div>
-            <div class="slot">🧱</div>
+            <div id="slot-0" class="slot selected">⛏️</div>
+            <div id="slot-1" class="slot">🧱</div>
+            <div id="slot-2" class="slot">🌑</div>
         </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
 <script>
-/**
- * TERRARIA ULTIMATE REPLICA - GITHUB REPO INTEGRATED
- */
-
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const ASSET_BASE = "https://jeremyryanknight2012.github.io/Terraria/thumbnails/";
@@ -84,24 +78,15 @@ let camera = { x: 0, y: 0 };
 let player = { x: 0, y: 0, vx: 0, vy: 0, w: 20, h: 34, grounded: false };
 const keys = {};
 const mouse = { x: 0, y: 0, down: false };
+let selectedSlot = 0;
 
-// --- ASSET LOADER ---
 function loadAssets(callback) {
     const images = {
-        relogic1: 'relogic1.png',
-        relogic2: 'relogic2.png',
-        relogic3: 'relogic3.png',
-        relogic4: 'relogic4.png',
-        relogic5: 'relogic5.png',
-        relogic6: 'relogic6.png',
-        relogic7: 'relogic7.png',
-        relogic8: 'relogic8.png',
-        relogic9: 'relogic9.png',
-        relogic10: 'relogic10.png',
-        tile1: 'tile1.png',
-        tile2: 'tile2.png',
-        tile3: 'tile3.png',
-        player: 'player_idle.png'
+        relogic1: 'relogic1.png', relogic2: 'relogic2.png', relogic3: 'relogic3.png',
+        relogic4: 'relogic4.png', relogic5: 'relogic5.png', relogic6: 'relogic6.png',
+        relogic7: 'relogic7.png', relogic8: 'relogic8.png', relogic9: 'relogic9.png',
+        relogic10: 'relogic10.png', tile1: 'tile1.png', tile2: 'tile2.png',
+        tile3: 'tile3.png', player: 'player_idle.png'
     };
     
     let loaded = 0;
@@ -120,12 +105,11 @@ function showScreen(id) {
     if(id !== 'none') document.getElementById(id).classList.remove('hidden');
 }
 
-// --- INITIALIZE SPLASH (3 VARIATIONS) ---
 function startSequence() {
     const splashImg = document.getElementById('splash-img');
-    const splashes = [assets.relogic1, assets.relogic2, assets.relogic3];
-    // Randomly pick 1 of the 3 links
-    splashImg.src = splashes[Math.floor(Math.random() * splashes.length)].src;
+    const splashKeys = ['relogic1', 'relogic2', 'relogic3', 'relogic4', 'relogic5', 'relogic6', 'relogic7', 'relogic8', 'relogic9', 'relogic10'];
+    const randomKey = splashKeys[Math.floor(Math.random() * splashKeys.length)];
+    splashImg.src = assets[randomKey].src;
 
     setTimeout(() => {
         document.getElementById('screen-splash').style.opacity = '0';
@@ -133,7 +117,6 @@ function startSequence() {
     }, 3000);
 }
 
-// --- WORLD LOGIC ---
 function initGame(size) {
     showScreen('none');
     document.getElementById('hud').style.display = 'block';
@@ -145,10 +128,11 @@ function initGame(size) {
         worldData[x] = [];
         let surface = Math.floor(100 + Math.sin(x * 0.08) * 8);
         for(let y=0; y < height; y++) {
-            if(y < surface) worldData[x][y] = 0;
-            else if(y === surface) worldData[x][y] = 2; // Grass
-            else if(y < surface + 10) worldData[x][y] = 1; // Dirt
-            else worldData[x][y] = 3; // Stone
+            let id = 0;
+            if (y === surface) id = 2;
+            else if (y > surface && y < surface + 10) id = 1;
+            else if (y >= surface + 10) id = 3;
+            worldData[x][y] = id;
         }
     }
     
@@ -160,6 +144,10 @@ function initGame(size) {
 function update() {
     if(!gameActive) return;
     
+    if(keys['1']) selectSlot(0);
+    if(keys['2']) selectSlot(1);
+    if(keys['3']) selectSlot(2);
+
     if(keys['a']) player.vx -= 0.6;
     if(keys['d']) player.vx += 0.6;
     if((keys['w'] || keys[' ']) && player.grounded) { player.vy = -8; player.grounded = false; }
@@ -167,34 +155,54 @@ function update() {
     player.vy += 0.4;
     player.vx *= 0.85;
     
+    // X Collision
     player.x += player.vx;
-    player.y += player.vy;
+    if(checkCollision(player.x, player.y) || checkCollision(player.x + player.w, player.y) ||
+       checkCollision(player.x, player.y + player.h - 2) || checkCollision(player.x + player.w, player.y + player.h - 2)) {
+        player.x -= player.vx;
+        player.vx = 0;
+    }
 
-    // Floor Collision Check
-    let tx = Math.floor((player.x + player.w/2) / 16);
-    let ty = Math.floor((player.y + player.h) / 16);
-    if(worldData[tx] && worldData[tx][ty] !== 0) {
-        player.y = ty * 16 - player.h;
+    // Y Collision
+    player.y += player.vy;
+    player.grounded = false;
+    if(checkCollision(player.x, player.y) || checkCollision(player.x + player.w, player.y) ||
+       checkCollision(player.x, player.y + player.h) || checkCollision(player.x + player.w, player.y + player.h)) {
+        if(player.vy > 0) player.grounded = true;
+        player.y -= player.vy;
         player.vy = 0;
-        player.grounded = true;
     }
 
     camera.x += (player.x - canvas.width/2 - camera.x) * 0.1;
     camera.y += (player.y - canvas.height/2 - camera.y) * 0.1;
 
-    // Mining Interaction
     if(mouse.down) {
         let mx = Math.floor((mouse.x + camera.x) / 16);
         let my = Math.floor((mouse.y + camera.y) / 16);
-        if(worldData[mx]) worldData[mx][my] = 0;
+        if(worldData[mx]) {
+            if(selectedSlot === 0) worldData[mx][my] = 0; // Mine
+            else if(selectedSlot === 1 && worldData[mx][my] === 0) worldData[mx][my] = 1; // Place Dirt
+            else if(selectedSlot === 2 && worldData[mx][my] === 0) worldData[mx][my] = 3; // Place Stone
+        }
     }
+}
+
+function checkCollision(x, y) {
+    let tx = Math.floor(x / 16);
+    let ty = Math.floor(y / 16);
+    return worldData[tx] && worldData[tx][ty] !== 0;
+}
+
+function selectSlot(index) {
+    selectedSlot = index;
+    document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+    document.getElementById('slot-' + index).classList.add('selected');
 }
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if(!gameActive) return;
 
-    // Sky Color (Changes with Depth)
     ctx.fillStyle = player.y > 1800 ? '#111' : '#5db1ff';
     ctx.fillRect(0,0, canvas.width, canvas.height);
 
@@ -215,7 +223,6 @@ function draw() {
         }
     }
 
-    // Player Rendering
     if(assets.player.complete) {
         ctx.drawImage(assets.player, player.x - camera.x, player.y - camera.y, player.w, player.h);
     } else {
@@ -224,7 +231,6 @@ function draw() {
     }
 }
 
-// --- INPUTS ---
 window.onkeydown = e => keys[e.key.toLowerCase()] = true;
 window.onkeyup = e => keys[e.key.toLowerCase()] = false;
 window.onmousedown = () => mouse.down = true;
@@ -237,14 +243,12 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// Final Init
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 loadAssets(() => {
     startSequence();
     gameLoop();
 });
-
 </script>
 </body>
 </html>
