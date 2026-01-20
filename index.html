@@ -4,12 +4,7 @@
     <meta charset="UTF-8">
     <title>Terraria - Loading</title>
     <style>
-        /* Reset all margins and padding to ensure 0 gap */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body, html { 
             width: 100%; 
@@ -19,77 +14,83 @@
             display: flex; 
             align-items: center; 
             justify-content: center; 
+            cursor: pointer;
         }
 
         #splash-container {
             width: 100vw;
             height: 100vh;
-            position: relative;
-            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         #splash-img { 
-            /* Changed to 'cover' to force the image to fill the entire screen area */
             width: 100%; 
             height: 100%; 
             object-fit: cover;
-            
             opacity: 0; 
             transition: opacity 1.2s ease-in-out; 
-            
-            /* High-quality pixel rendering */
             image-rendering: pixelated;
             image-rendering: crisp-edges;
         }
 
-        /* Optional: Adding a slight vignette to make it feel more like a game boot-up */
-        #splash-container::after {
-            content: '';
+        #unmute-btn {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.5);
-            pointer-events: none;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            z-index: 100;
+            border-radius: 4px;
+            transition: 0.3s;
+        }
+
+        #unmute-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
     </style>
 </head>
-<body>
+<body onclick="interact()">
+
+    <button id="unmute-btn">🔊 Click to Unmute Audio</button>
 
     <div id="splash-container">
         <img id="splash-img" src="">
     </div>
 
 <script>
-    const THUMB_BASE = "https://jeremyryanknight2012.github.io/Terraria/thumbnails/";
+    const THUMB_BASE = "./thumbnails/";
     const splashImg = document.getElementById('splash-img');
+    let hasInteracted = false;
+
+    // Primer function to satisfy browser autoplay policies
+    function interact() {
+        hasInteracted = true;
+        document.getElementById('unmute-btn').style.opacity = "0.5";
+        document.getElementById('unmute-btn').innerText = "🔊 Audio Primed";
+    }
     
-    // Pick a random splash (1-10)
     const randomNum = Math.floor(Math.random() * 10) + 1;
     splashImg.src = `${THUMB_BASE}relogic${randomNum}.png`;
 
     splashImg.onload = () => {
         splashImg.style.opacity = "1";
         
-        // Show for 3.5 seconds
         setTimeout(() => {
             splashImg.style.opacity = "0";
-            
-            // Redirect to menu.html
             setTimeout(() => {
                 window.location.href = "menu.html";
             }, 1200);
         }, 3500);
     };
 
-    // Error safety
-    splashImg.onerror = () => {
-        window.location.href = "menu.html";
-    };
+    splashImg.onerror = () => { window.location.href = "menu.html"; };
 </script>
 </body>
 </html>
