@@ -2,168 +2,249 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Terraria Clone - Re-Logic Edition</title>
+    <title>Terraria - Full GitHub Build</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; color: white; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; color: white; user-select: none; }
         canvas { display: block; image-rendering: pixelated; }
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .menu-screen { 
-            position: absolute; width: 100%; height: 100%; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.7); pointer-events: auto;
+        
+        /* UI Layers */
+        .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; transition: opacity 0.8s; z-index: 20; }
+        .hidden { display: none !important; }
+        
+        /* Menu Visuals */
+        #screen-menu { background: #000; overflow: hidden; }
+        .menu-bg-layer { position: absolute; width: 110%; height: 110%; top: -5%; left: -5%; object-fit: cover; z-index: -1; }
+        
+        .btn { 
+            background: rgba(35, 40, 90, 0.85); border: 2px solid #6b7aff; 
+            padding: 15px 50px; margin: 10px; cursor: pointer; font-size: 24px;
+            text-shadow: 2px 2px #000; width: 300px; text-align: center;
+            transition: 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-        .btn {
-            background: #444; border: 2px solid #888; padding: 15px 40px; margin: 10px;
-            cursor: pointer; font-size: 20px; transition: 0.2s;
-        }
-        .btn:hover { background: #666; border-color: #fff; }
-        #splash { background: #000; z-index: 100; }
-        #main-menu { display: none; background: url('https://i.imgur.com/39p6m9V.png') center/cover; }
+        .btn:hover { background: #4a54d1; border-color: #fff; transform: scale(1.05); }
+
+        #hud { position: absolute; top: 20px; left: 20px; pointer-events: none; display: none; z-index: 10; }
+        .hotbar { display: flex; gap: 8px; }
+        .slot { width: 48px; height: 48px; background: rgba(0,0,0,0.7); border: 2px solid #aaa; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .selected { border-color: #ffd700; box-shadow: 0 0 15px #ffd700; }
     </style>
 </head>
 <body>
 
-<div id="ui-layer">
-    <div id="splash" class="menu-screen">
-        <h1 id="relogic-text" style="font-size: 60px; letter-spacing: 10px;">RE-LOGIC</h1>
-        <p id="relogic-sub">Development and Strategy</p>
+    <div id="screen-splash" class="screen">
+        <img id="splash-img" src="" style="width: 500px; filter: drop-shadow(0 0 30px rgba(255,255,255,0.1));">
     </div>
 
-    <div id="main-menu" class="menu-screen">
-        <h1 style="font-size: 80px; text-shadow: 4px 4px #000;">TERRARIA</h1>
-        <div class="btn" onclick="startGame()">Single Player</div>
-        <div class="btn" onclick="alert('Multiplayer coming soon!')">Multiplayer</div>
-        <div class="btn">Settings</div>
-        <div class="btn" onclick="window.close()">Exit</div>
+    <div id="screen-menu" class="screen hidden">
+        <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_0.png" class="menu-bg-layer" style="opacity: 1;">
+        <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_1.png" class="menu-bg-layer" id="cloud-layer" style="opacity: 0.8;">
+        <img src="https://jeremyryanknight2012.github.io/Terraria/thumbnails/bg_2.png" class="menu-bg-layer" style="opacity: 0.9;">
+        
+        <h1 style="font-size: 90px; margin-bottom: 40px; text-shadow: 6px 6px #000; color: #a2ffaf; letter-spacing: 5px;">Terraria</h1>
+        
+        <div class="btn" onclick="showScreen('screen-world')">Single Player</div>
+        <div class="btn" onclick="alert('Join via Steam...')">Multiplayer</div>
+        <div class="btn" onclick="location.reload()">Refresh Assets</div>
+        <div class="btn" onclick="window.close()">Exit Game</div>
     </div>
 
-    <div id="hud" style="display:none; padding: 20px;">
-        HP: <div style="width:200px; height:20px; background:#555; border:2px solid #fff;">
-            <div id="hp-fill" style="width:100%; height:100%; background:red;"></div>
+    <div id="screen-world" class="screen hidden">
+        <h2 style="font-size: 32px; margin-bottom: 30px;">Choose World</h2>
+        <div class="btn" style="width: 450px; height: 80px; text-align: left; display: flex; align-items: center;" onclick="initGame('Small')">
+            <div style="font-size: 30px; margin-right: 20px;">🌳</div>
+            <div><b>World 1</b><br><span style="font-size: 14px; color: #ccc;">Small World - Journey Mode</span></div>
+        </div>
+        <div class="btn" style="background: #1b5e20; width: 450px;" onclick="initGame('Large')">Create New World</div>
+        <div class="btn" onclick="showScreen('screen-menu')">Back</div>
+    </div>
+
+    <div id="hud">
+        <div class="hotbar">
+            <div class="slot selected">⛏️</div>
+            <div class="slot">🗡️</div>
+            <div class="slot">🧱</div>
         </div>
     </div>
-</div>
 
-<canvas id="gameCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
 <script>
+/**
+ * TERRARIA ULTIMATE REPLICA - GITHUB REPO INTEGRATED
+ */
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let gameState = "SPLASH";
+const ASSET_BASE = "https://jeremyryanknight2012.github.io/Terraria/thumbnails/";
 
-// --- SPLASH SCREEN LOGIC ---
-function initSplash() {
-    const text = document.getElementById('relogic-text');
-    const bg = document.getElementById('splash');
-    const variations = [
-        { t: "RE-LOGIC", c: "#32CD32", b: "#000" }, // Classic Green
-        { t: "RE-LOGIC", c: "#FFF", b: "#2c3e50" },    // Modern White
-        { t: "RE-LOGIC", c: "#da70d6", b: "#1a0521" }  // Purple/Corruption
-    ];
-    const rand = variations[Math.floor(Math.random() * variations.length)];
-    text.style.color = rand.c;
-    bg.style.backgroundColor = rand.b;
-
-    // Fade out splash after 2.5 seconds
-    setTimeout(() => {
-        document.getElementById('splash').style.display = 'none';
-        document.getElementById('main-menu').style.display = 'flex';
-        gameState = "MENU";
-    }, 2500);
-}
-
-// --- GAME CORE ---
-const TILE_SIZE = 16;
-const WORLD_W = 300;
-const WORLD_H = 150;
-let world = [];
+const assets = {};
+let gameActive = false;
+let worldData = [];
 let camera = { x: 0, y: 0 };
-let player = { x: 2400, y: 500, vx: 0, vy: 0, w: 16, h: 30, grounded: false };
+let player = { x: 0, y: 0, vx: 0, vy: 0, w: 20, h: 34, grounded: false };
+const keys = {};
+const mouse = { x: 0, y: 0, down: false };
 
-function startGame() {
-    document.getElementById('main-menu').style.display = 'none';
-    document.getElementById('hud').style.display = 'block';
-    gameState = "PLAYING";
-    initWorld();
+// --- ASSET LOADER ---
+function loadAssets(callback) {
+    const images = {
+        relogic1: 'relogic1.png',
+        relogic2: 'relogic2.png',
+        relogic3: 'relogic3.png',
+        relogic4: 'relogic4.png',
+        relogic5: 'relogic5.png',
+        relogic6: 'relogic6.png',
+        relogic7: 'relogic7.png',
+        relogic8: 'relogic8.png',
+        relogic9: 'relogic9.png',
+        relogic10: 'relogic10.png',
+        tile1: 'tile1.png',
+        tile2: 'tile2.png',
+        tile3: 'tile3.png',
+        player: 'player_idle.png'
+    };
+    
+    let loaded = 0;
+    const total = Object.keys(images).length;
+    for (let key in images) {
+        assets[key] = new Image();
+        assets[key].crossOrigin = "anonymous";
+        assets[key].src = ASSET_BASE + images[key];
+        assets[key].onload = () => { if (++loaded === total) callback(); };
+        assets[key].onerror = () => { if (++loaded === total) callback(); };
+    }
 }
 
-function initWorld() {
-    for (let x = 0; x < WORLD_W; x++) {
-        world[x] = [];
-        let surface = Math.floor(60 + Math.sin(x * 0.1) * 8);
-        for (let y = 0; y < WORLD_H; y++) {
-            if (y < surface) world[x][y] = 0;
-            else if (y === surface) world[x][y] = 2; // Grass
-            else world[x][y] = 1; // Dirt
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    if(id !== 'none') document.getElementById(id).classList.remove('hidden');
+}
+
+// --- INITIALIZE SPLASH (3 VARIATIONS) ---
+function startSequence() {
+    const splashImg = document.getElementById('splash-img');
+    const splashes = [assets.relogic1, assets.relogic2, assets.relogic3];
+    // Randomly pick 1 of the 3 links
+    splashImg.src = splashes[Math.floor(Math.random() * splashes.length)].src;
+
+    setTimeout(() => {
+        document.getElementById('screen-splash').style.opacity = '0';
+        setTimeout(() => showScreen('screen-menu'), 800);
+    }, 3000);
+}
+
+// --- WORLD LOGIC ---
+function initGame(size) {
+    showScreen('none');
+    document.getElementById('hud').style.display = 'block';
+    
+    const width = size === 'Large' ? 1500 : 800;
+    const height = 400;
+    
+    for(let x=0; x < width; x++) {
+        worldData[x] = [];
+        let surface = Math.floor(100 + Math.sin(x * 0.08) * 8);
+        for(let y=0; y < height; y++) {
+            if(y < surface) worldData[x][y] = 0;
+            else if(y === surface) worldData[x][y] = 2; // Grass
+            else if(y < surface + 10) worldData[x][y] = 1; // Dirt
+            else worldData[x][y] = 3; // Stone
         }
     }
+    
+    player.x = (width * 16) / 2;
+    player.y = 80 * 16;
+    gameActive = true;
 }
 
 function update() {
-    if (gameState !== "PLAYING") return;
-
-    if (keys['a']) player.vx -= 0.5;
-    if (keys['d']) player.vx += 0.5;
-    if (keys[' '] && player.grounded) { player.vy = -7; player.grounded = false; }
-
-    player.vy += 0.3; // Gravity
-    player.vx *= 0.8; // Friction
-
-    // Physics
+    if(!gameActive) return;
+    
+    if(keys['a']) player.vx -= 0.6;
+    if(keys['d']) player.vx += 0.6;
+    if((keys['w'] || keys[' ']) && player.grounded) { player.vy = -8; player.grounded = false; }
+    
+    player.vy += 0.4;
+    player.vx *= 0.85;
+    
     player.x += player.vx;
-    if (isSolid(player.x, player.y + 5) || isSolid(player.x + player.w, player.y + 5)) {
-        player.x -= player.vx; player.vx = 0;
-    }
     player.y += player.vy;
-    player.grounded = false;
-    if (isSolid(player.x, player.y + player.h) || isSolid(player.x + player.w, player.y + player.h)) {
-        player.y -= player.vy; player.vy = 0; player.grounded = true;
+
+    // Floor Collision Check
+    let tx = Math.floor((player.x + player.w/2) / 16);
+    let ty = Math.floor((player.y + player.h) / 16);
+    if(worldData[tx] && worldData[tx][ty] !== 0) {
+        player.y = ty * 16 - player.h;
+        player.vy = 0;
+        player.grounded = true;
     }
 
-    camera.x += (player.x - window.innerWidth/2 - camera.x) * 0.1;
-    camera.y += (player.y - window.innerHeight/2 - camera.y) * 0.1;
-}
+    camera.x += (player.x - canvas.width/2 - camera.x) * 0.1;
+    camera.y += (player.y - canvas.height/2 - camera.y) * 0.1;
 
-function isSolid(x, y) {
-    let tx = Math.floor(x / TILE_SIZE);
-    let ty = Math.floor(y / TILE_SIZE);
-    return world[tx] && world[tx][ty] !== 0;
+    // Mining Interaction
+    if(mouse.down) {
+        let mx = Math.floor((mouse.x + camera.x) / 16);
+        let my = Math.floor((mouse.y + camera.y) / 16);
+        if(worldData[mx]) worldData[mx][my] = 0;
+    }
 }
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (gameState !== "PLAYING") return;
+    if(!gameActive) return;
 
-    ctx.fillStyle = '#87CEEB'; // Sky
+    // Sky Color (Changes with Depth)
+    ctx.fillStyle = player.y > 1800 ? '#111' : '#5db1ff';
     ctx.fillRect(0,0, canvas.width, canvas.height);
 
-    for(let x = Math.floor(camera.x/16); x < Math.floor((camera.x + canvas.width)/16) + 1; x++) {
-        for(let y = Math.floor(camera.y/16); y < Math.floor((camera.y + canvas.height)/16) + 1; y++) {
-            if(!world[x] || world[x][y] === 0) continue;
-            ctx.fillStyle = world[x][y] === 2 ? '#4caf50' : '#5d4037';
-            ctx.fillRect(x*16 - camera.x, y*16 - camera.y, 16, 16);
+    const sX = Math.floor(camera.x / 16);
+    const eX = sX + Math.ceil(canvas.width / 16) + 1;
+    const sY = Math.floor(camera.y / 16);
+    const eY = sY + Math.ceil(canvas.height / 16) + 1;
+
+    for(let x=sX; x<eX; x++) {
+        if(!worldData[x]) continue;
+        for(let y=sY; y<eY; y++) {
+            let id = worldData[x][y];
+            if(id === 0) continue;
+            let img = assets['tile' + id];
+            if(img && img.complete) {
+                ctx.drawImage(img, x*16 - camera.x, y*16 - camera.y, 16, 16);
+            }
         }
     }
 
-    ctx.fillStyle = 'red';
-    ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
+    // Player Rendering
+    if(assets.player.complete) {
+        ctx.drawImage(assets.player, player.x - camera.x, player.y - camera.y, player.w, player.h);
+    } else {
+        ctx.fillStyle = '#ff7777';
+        ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
+    }
 }
 
-// --- UTILS ---
-const keys = {};
+// --- INPUTS ---
 window.onkeydown = e => keys[e.key.toLowerCase()] = true;
 window.onkeyup = e => keys[e.key.toLowerCase()] = false;
+window.onmousedown = () => mouse.down = true;
+window.onmouseup = () => mouse.down = false;
+window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
 
-function loop() {
+function gameLoop() {
     update();
     draw();
-    requestAnimationFrame(loop);
+    requestAnimationFrame(gameLoop);
 }
 
+// Final Init
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
-initSplash();
-loop();
+loadAssets(() => {
+    startSequence();
+    gameLoop();
+});
+
 </script>
 </body>
 </html>
