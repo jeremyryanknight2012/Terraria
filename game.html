@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Terraria - New Character</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #000 url('../thumbnails/bg_2.png') no-repeat center center fixed; 
+            background-size: cover; font-family: 'Arial', sans-serif; color: white;
+            display: flex; flex-direction: column; align-items: center; height: 100vh; padding-top: 50px;
+        }
+
+        /* Icon Grid */
+        .icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 30px; }
+        .icon-btn { 
+            width: 60px; height: 60px; background: rgba(0,0,0,0.6); border: 2px solid #555;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .icon-btn img { width: 40px; image-rendering: pixelated; }
+        .icon-btn.active { border-color: #ffd700; background: rgba(255, 215, 0, 0.2); box-shadow: 0 0 15px gold; }
+
+        /* Name Input */
+        .name-section { margin-bottom: 30px; font-size: 24px; }
+        input[type="text"] { 
+            background: #222; border: 2px solid #6b7aff; color: white; padding: 10px; font-size: 20px; outline: none;
+        }
+
+        /* Mode Selection */
+        .creation-container { display: flex; gap: 40px; width: 800px; background: rgba(0,0,0,0.8); padding: 30px; border: 2px solid #555; }
+        .modes { display: flex; flex-direction: column; gap: 15px; width: 200px; }
+        .mode-btn { 
+            padding: 10px; border: 1px solid #6b7aff; cursor: pointer; text-align: center; background: #111;
+        }
+        .mode-btn.active { background: #4a54d1; }
+        .mode-desc { flex: 1; padding: 10px; color: #ccc; font-style: italic; border-left: 1px solid #555; }
+
+        .footer { margin-top: 30px; display: flex; gap: 20px; }
+        .btn { padding: 10px 40px; cursor: pointer; font-size: 20px; background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="icon-grid" id="icon-grid"></div>
+
+    <div class="name-section">
+        Name: <input type="text" id="char-name" placeholder="Empty Name">
+    </div>
+
+    <div class="creation-container">
+        <div class="modes">
+            <div class="mode-btn active" onclick="setMode('Journey', this)">Journey</div>
+            <div class="mode-btn" onclick="setMode('Classic', this)">Classic</div>
+            <div class="mode-btn" onclick="setMode('Mediumcore', this)">Mediumcore</div>
+            <div class="mode-btn" onclick="setMode('Hardcore', this)">Hardcore</div>
+        </div>
+        <div class="mode-desc" id="mode-text">
+            Journey characters start with extra equipment. Can only be played on Journey worlds.
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="btn" onclick="window.location.href='../game.html'">Back</div>
+        <div class="btn" onclick="saveCharacter()">Create</div>
+    </div>
+
+<script>
+    let selectedIcon = "character1";
+    let selectedMode = "Journey";
+
+    const descriptions = {
+        Journey: "Journey characters start with extra equipment. Can only be played on Journey worlds.",
+        Classic: "Classic characters drop money on death.",
+        Mediumcore: "Mediumcore characters drop items on death.",
+        Hardcore: "Hardcore characters die for good."
+    };
+
+    // Create Icon Buttons
+    const grid = document.getElementById('icon-grid');
+    for (let i = 1; i <= 10; i++) {
+        const div = document.createElement('div');
+        div.className = `icon-btn ${i === 1 ? 'active' : ''}`;
+        div.innerHTML = `<img src="../thumbnails/character${i}.png">`;
+        div.onclick = function() {
+            document.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            selectedIcon = `character${i}`;
+        };
+        grid.appendChild(div);
+    }
+
+    function setMode(mode, el) {
+        selectedMode = mode;
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('mode-text').innerText = descriptions[mode];
+    }
+
+    function saveCharacter() {
+        const nameInput = document.getElementById('char-name').value;
+        const finalName = nameInput.trim() === "" ? "Player" : nameInput;
+
+        const newChar = {
+            name: finalName,
+            icon: selectedIcon,
+            mode: selectedMode
+        };
+
+        const players = JSON.parse(localStorage.getItem('terraria_players') || '[]');
+        players.push(newChar);
+        localStorage.setItem('terraria_players', JSON.stringify(players));
+
+        window.location.href = '../game.html';
+    }
+</script>
+</body>
+</html>
