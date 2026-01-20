@@ -48,11 +48,8 @@
     function syncMusic() {
         const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
         if (musicEnabled && music.paused) {
-            // Pick up where index.html left off
             const savedTime = localStorage.getItem('menuMusicTime');
-            if (savedTime) {
-                music.currentTime = parseFloat(savedTime);
-            }
+            if (savedTime) music.currentTime = parseFloat(savedTime);
             music.play();
         }
     }
@@ -61,17 +58,11 @@
         const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
         if (musicEnabled) {
             const savedTime = localStorage.getItem('menuMusicTime');
-            if (savedTime) {
-                music.currentTime = parseFloat(savedTime);
-            }
-            // Try to autoplay since the user already clicked on index.html
-            music.play().catch(() => {
-                console.log("Browser blocked autoplay transition. Click once to sync.");
-            });
+            if (savedTime) music.currentTime = parseFloat(savedTime);
+            music.play().catch(() => console.log("Click to resume music"));
         }
     });
 
-    // Parallax
     window.onmousemove = (e) => {
         const x = (e.clientX / window.innerWidth) - 0.5;
         const y = (e.clientY / window.innerHeight) - 0.5;
