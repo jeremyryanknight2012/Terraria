@@ -15,7 +15,11 @@
             position: absolute; width: 110%; height: 110%; top: -5%; left: -5%; 
             object-fit: cover; z-index: -1; image-rendering: pixelated;
         }
-        #game-title { width: 600px; max-width: 80vw; margin-bottom: 40px; z-index: 10; image-rendering: pixelated; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); }
+        #game-title { 
+            width: 600px; max-width: 80vw; margin-bottom: 40px; 
+            z-index: 10; image-rendering: pixelated; 
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); 
+        }
         .btn-container { display: flex; flex-direction: column; gap: 15px; z-index: 10; }
         .btn { 
             background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff; 
@@ -26,7 +30,7 @@
         .btn:hover { background: #4a54d1; border-color: #fff; transform: scale(1.05); }
     </style>
 </head>
-<body onclick="syncMusic()">
+<body>
 
     <img src="./thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
     <img src="./thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
@@ -45,21 +49,14 @@
     music.loop = true;
     music.volume = 0.5;
 
-    function syncMusic() {
-        const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
-        if (musicEnabled && music.paused) {
-            const savedTime = localStorage.getItem('menuMusicTime');
-            if (savedTime) music.currentTime = parseFloat(savedTime);
-            music.play();
-        }
-    }
-
     window.addEventListener('load', () => {
         const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
         if (musicEnabled) {
             const savedTime = localStorage.getItem('menuMusicTime');
-            if (savedTime) music.currentTime = parseFloat(savedTime);
-            music.play().catch(() => console.log("Click to resume music"));
+            if (savedTime) {
+                music.currentTime = parseFloat(savedTime);
+            }
+            music.play().catch(e => console.log("Music blocked"));
         }
     });
 
