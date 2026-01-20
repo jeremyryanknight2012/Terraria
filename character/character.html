@@ -2,74 +2,123 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Terraria - Select Player</title>
+    <title>Terraria - New Character</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            background: #000 url('./thumbnails/bg_2.png') no-repeat center center fixed; 
-            background-size: cover;
-            font-family: 'Arial', sans-serif; color: white; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; 
+            background: #000 url('../thumbnails/bg_2.png') no-repeat center center fixed; 
+            background-size: cover; font-family: 'Arial', sans-serif; color: white;
+            display: flex; flex-direction: column; align-items: center; height: 100vh; padding-top: 50px;
         }
-        h1 { font-size: 48px; text-shadow: 4px 4px #000; margin-bottom: 30px; color: #a2ffaf; }
-        
-        #player-list {
-            width: 500px; max-height: 400px; overflow-y: auto;
-            background: rgba(0, 0, 0, 0.7); border: 2px solid #555;
-            padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;
+        .icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
+        .icon-btn { 
+            width: 60px; height: 60px; background: rgba(0,0,0,0.6); border: 2px solid #555;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .icon-btn img { width: 40px; image-rendering: pixelated; }
+        .icon-btn.active { border-color: #ffd700; background: rgba(255, 215, 0, 0.2); box-shadow: 0 0 15px gold; }
+
+        .name-section { margin-bottom: 20px; font-size: 24px; text-shadow: 2px 2px #000; }
+        input[type="text"] { 
+            background: #111; border: 2px solid #6b7aff; color: white; padding: 10px; font-size: 20px; outline: none; width: 300px;
         }
 
-        .player-card {
-            background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff;
-            padding: 15px; display: flex; align-items: center; gap: 15px;
-            cursor: pointer; transition: 0.2s;
-        }
-        .player-card:hover { background: #4a54d1; border-color: #fff; }
-        .player-card img { width: 40px; image-rendering: pixelated; }
+        .creation-container { display: flex; gap: 20px; width: 700px; background: rgba(0,0,0,0.85); padding: 20px; border: 2px solid #555; }
+        .modes { display: flex; flex-direction: column; gap: 10px; width: 220px; }
+        .mode-btn { padding: 12px; border: 1px solid #6b7aff; cursor: pointer; text-align: center; background: #111; font-weight: bold; }
+        .mode-btn.active { background: #4a54d1; border-color: white; }
+        .mode-desc { flex: 1; padding: 15px; color: #ccc; font-size: 18px; border-left: 1px solid #555; display: flex; align-items: center; }
 
-        .controls { display: flex; gap: 20px; }
-        .btn { 
-            background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff; 
-            padding: 10px 40px; cursor: pointer; font-size: 20px;
-            color: white; text-align: center; transition: 0.2s;
-        }
-        .btn:hover { background: #4a54d1; border-color: #fff; transform: scale(1.05); }
+        .footer { margin-top: 30px; display: flex; gap: 20px; }
+        .btn { padding: 10px 40px; cursor: pointer; font-size: 22px; background: rgba(35, 40, 90, 0.9); border: 2px solid #6b7aff; color: white; transition: 0.2s; }
+        .btn:hover { background: #4a54d1; transform: scale(1.05); }
     </style>
 </head>
 <body>
 
-    <h1>Select Player</h1>
+    <div class="icon-grid" id="icon-grid"></div>
 
-    <div id="player-list">
+    <div class="name-section">
+        Name: <input type="text" id="char-name" placeholder="Empty Name">
+    </div>
+
+    <div class="creation-container">
+        <div class="modes">
+            <div class="mode-btn active" onclick="setMode('Journey', this)">Journey</div>
+            <div class="mode-btn" onclick="setMode('Classic', this)">Classic</div>
+            <div class="mode-btn" onclick="setMode('Mediumcore', this)">Mediumcore</div>
+            <div class="mode-btn" onclick="setMode('Hardcore', this)">Hardcore</div>
         </div>
+        <div class="mode-desc" id="mode-text">
+            Journey characters start with extra equipment. Can only be played on Journey worlds.
+        </div>
+    </div>
 
-    <div class="controls">
-        <div class="btn" onclick="window.location.href='menu.html'">Back</div>
-        <div class="btn" onclick="window.location.href='./character/character.html'">New</div>
+    <div class="footer">
+        <div class="btn" onclick="navTo('../game.html')">Back</div>
+        <div class="btn" onclick="saveCharacter()">Create</div>
     </div>
 
 <script>
-    function loadCharacters() {
-        const container = document.getElementById('player-list');
-        const players = JSON.parse(localStorage.getItem('terraria_players') || '[]');
+    const music = new Audio("../audio/menu.mp3");
+    music.loop = true;
+    music.volume = 0.5;
 
-        if (players.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:#888;">No characters found.</p>';
-            return;
+    let selectedIcon = "character1";
+    let selectedMode = "Journey";
+
+    const descriptions = {
+        Journey: "Journey characters start with extra equipment. Can only be played on Journey worlds.",
+        Classic: "Classic characters drop money on death.",
+        Mediumcore: "Mediumcore characters drop items on death.",
+        Hardcore: "Hardcore characters die for good."
+    };
+
+    window.addEventListener('load', () => {
+        const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
+        if (musicEnabled) {
+            const savedTime = localStorage.getItem('menuMusicTime');
+            if (savedTime) music.currentTime = parseFloat(savedTime);
+            music.play();
         }
+        setupIcons();
+    });
 
-        container.innerHTML = players.map(p => `
-            <div class="player-card">
-                <img src="./thumbnails/${p.icon}.png">
-                <div>
-                    <div style="font-weight:bold; font-size:20px;">${p.name}</div>
-                    <div style="font-size:14px; color:#ffd700;">${p.mode} Mode</div>
-                </div>
-            </div>
-        `).join('');
+    function navTo(url) {
+        localStorage.setItem('menuMusicTime', music.currentTime);
+        window.location.href = url;
     }
 
-    window.onload = loadCharacters;
+    function setupIcons() {
+        const grid = document.getElementById('icon-grid');
+        for (let i = 1; i <= 10; i++) {
+            const div = document.createElement('div');
+            div.className = `icon-btn ${i === 1 ? 'active' : ''}`;
+            div.innerHTML = `<img src="../thumbnails/character${i}.png">`;
+            div.onclick = function() {
+                document.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                selectedIcon = `character${i}`;
+            };
+            grid.appendChild(div);
+        }
+    }
+
+    function setMode(mode, el) {
+        selectedMode = mode;
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('mode-text').innerText = descriptions[mode];
+    }
+
+    function saveCharacter() {
+        const nameInput = document.getElementById('char-name').value.trim();
+        const finalName = nameInput === "" ? "Player" : nameInput;
+        const players = JSON.parse(localStorage.getItem('terraria_players') || '[]');
+        players.push({ name: finalName, icon: selectedIcon, mode: selectedMode });
+        localStorage.setItem('terraria_players', JSON.stringify(players));
+        navTo('../game.html');
+    }
 </script>
 </body>
 </html>
