@@ -31,6 +31,7 @@
 
     <div id="screen-splash" class="screen">
         <img id="splash-img" src="" style="width: 500px; filter: drop-shadow(0 0 30px rgba(255,255,255,0.1));">
+        <p style="margin-top: 20px; color: #555; font-size: 14px; letter-spacing: 2px;">CLICK TO START AUDIO</p>
     </div>
 
     <div id="screen-menu" class="screen hidden">
@@ -40,8 +41,8 @@
         
         <h1 style="font-size: 90px; margin-bottom: 40px; text-shadow: 6px 6px #000; color: #a2ffaf; letter-spacing: 5px;">Terraria</h1>
         
-        <div class="btn" onclick="startGame()">Single Player</div>
-        <div class="btn" onclick="alert('Join via Steam...')">Multiplayer</div>
+        <div class="btn" onclick="showScreen('screen-world')">Single Player</div>
+        <div class="btn" onclick="window.location.href='settings.html'">Settings</div>
         <div class="btn" onclick="location.reload()">Refresh Assets</div>
     </div>
 
@@ -82,20 +83,25 @@ let player = { x: 0, y: 0, vx: 0, vy: 0, w: 20, h: 34, grounded: false };
 const keys = {};
 const mouse = { x: 0, y: 0, down: false };
 let selectedSlot = 0;
+let userInteracted = false;
 
 // --- AUDIO MANAGER ---
 function loadAudio() {
-    sounds.music = new Audio(AUDIO_BASE + 'music_overworld.mp3');
-    sounds.music.loop = true;
-    sounds.music.volume = 0.3;
+    sounds.menuMusic = new Audio(AUDIO_BASE + 'menu.mp3');
+    sounds.menuMusic.loop = true;
+    sounds.menuMusic.volume = 0.4;
+
+    sounds.gameMusic = new Audio(AUDIO_BASE + 'music_overworld.mp3');
+    sounds.gameMusic.loop = true;
+    sounds.gameMusic.volume = 0.3;
 
     sounds.mine = new Audio(AUDIO_BASE + 'sound_mine.mp3');
     sounds.jump = new Audio(AUDIO_BASE + 'sound_jump.mp3');
-    sounds.place = new Audio(AUDIO_BASE + 'sound_mine.mp3'); // Fallback to mine sound
 }
 
 function playSound(name) {
-    if (sounds[name]) {
+    const musicSetting = localStorage.getItem('musicEnabled') !== 'false';
+    if (sounds[name] && musicSetting) {
         const s = sounds[name].cloneNode();
         s.volume = 0.4;
         s.play().catch(() => {});
@@ -129,11 +135,6 @@ function showScreen(id) {
     if(id !== 'none') document.getElementById(id).classList.remove('hidden');
 }
 
-function startGame() {
-    sounds.music.play().catch(() => console.log("User interaction required for audio"));
-    showScreen('screen-world');
-}
-
 function startSequence() {
     const splashImg = document.getElementById('splash-img');
     const splashKeys = ['relogic1', 'relogic2', 'relogic3', 'relogic4', 'relogic5', 'relogic6', 'relogic7', 'relogic8', 'relogic9', 'relogic10'];
@@ -141,12 +142,19 @@ function startSequence() {
     splashImg.src = assets[randomKey].src;
 
     setTimeout(() => {
+        const musicSetting = localStorage.getItem('musicEnabled') !== 'false';
+        if(userInteracted && musicSetting) sounds.menuMusic.play().catch(() => {});
+        
         document.getElementById('screen-splash').style.opacity = '0';
         setTimeout(() => showScreen('screen-menu'), 800);
     }, 3000);
 }
 
 function initGame(size) {
+    sounds.menuMusic.pause();
+    const musicSetting = localStorage.getItem('musicEnabled') !== 'false';
+    if(musicSetting) sounds.gameMusic.play().catch(() => {});
+    
     showScreen('none');
     document.getElementById('hud').style.display = 'block';
     
@@ -158,9 +166,9 @@ function initGame(size) {
         let surface = Math.floor(100 + Math.sin(x * 0.08) * 8);
         for(let y=0; y < height; y++) {
             let id = 0;
-            if (y === surface) id = 2; // Grass
-            else if (y > surface && y < surface + 10) id = 1; // Dirt
-            else if (y >= surface + 10) id = 3; // Stone
+            if (y === surface) id = 2; 
+            else if (y > surface && y < surface + 10) id = 1; 
+            else if (y >= surface + 10) id = 3;
             worldData[x][y] = id;
         }
     }
@@ -185,12 +193,10 @@ function checkCollision(x, y) {
 function update() {
     if(!gameActive) return;
     
-    // Slot shortcuts
     if(keys['1']) selectSlot(0);
     if(keys['2']) selectSlot(1);
     if(keys['3']) selectSlot(2);
 
-    // Movement
     if(keys['a']) player.vx -= 0.6;
     if(keys['d']) player.vx += 0.6;
     if((keys['w'] || keys[' ']) && player.grounded) { 
@@ -202,7 +208,6 @@ function update() {
     player.vy += 0.4;
     player.vx *= 0.85;
     
-    // X Movement & Collision
     player.x += player.vx;
     if(checkCollision(player.x, player.y + 2) || checkCollision(player.x + player.w, player.y + 2) ||
        checkCollision(player.x, player.y + player.h - 2) || checkCollision(player.x + player.w, player.y + player.h - 2)) {
@@ -210,7 +215,6 @@ function update() {
         player.vx = 0;
     }
 
-    // Y Movement & Collision
     player.y += player.vy;
     player.grounded = false;
     if(checkCollision(player.x, player.y) || checkCollision(player.x + player.w, player.y) ||
@@ -220,28 +224,19 @@ function update() {
         player.vy = 0;
     }
 
-    // Camera follow
     camera.x += (player.x - canvas.width/2 - camera.x) * 0.1;
     camera.y += (player.y - canvas.height/2 - camera.y) * 0.1;
 
-    // Click Actions
     if(mouse.down) {
         let mx = Math.floor((mouse.x + camera.x) / 16);
         let my = Math.floor((mouse.y + camera.y) / 16);
-        
         if(worldData[mx]) {
             if(selectedSlot === 0 && worldData[mx][my] !== 0) {
-                worldData[mx][my] = 0; // Break
+                worldData[mx][my] = 0;
                 playSound('mine');
             }
-            else if(selectedSlot === 1 && worldData[mx][my] === 0) {
-                worldData[mx][my] = 1; // Place Dirt
-                playSound('place');
-            }
-            else if(selectedSlot === 2 && worldData[mx][my] === 0) {
-                worldData[mx][my] = 3; // Place Stone
-                playSound('place');
-            }
+            else if(selectedSlot === 1 && worldData[mx][my] === 0) worldData[mx][my] = 1;
+            else if(selectedSlot === 2 && worldData[mx][my] === 0) worldData[mx][my] = 3;
         }
     }
 }
@@ -250,7 +245,6 @@ function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if(!gameActive) return;
 
-    // Sky
     ctx.fillStyle = '#5db1ff';
     ctx.fillRect(0,0, canvas.width, canvas.height);
 
@@ -271,7 +265,6 @@ function draw() {
         }
     }
 
-    // Player
     if(assets.player.complete) {
         ctx.drawImage(assets.player, player.x - camera.x, player.y - camera.y, player.w, player.h);
     } else {
@@ -282,7 +275,7 @@ function draw() {
 
 window.onkeydown = e => keys[e.key.toLowerCase()] = true;
 window.onkeyup = e => keys[e.key.toLowerCase()] = false;
-window.onmousedown = () => mouse.down = true;
+window.onmousedown = () => { mouse.down = true; userInteracted = true; };
 window.onmouseup = () => mouse.down = false;
 window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
 
