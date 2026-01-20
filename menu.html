@@ -60,27 +60,21 @@
             color: white;
         }
 
-        .btn:hover { background: #4a54d1; border-color: #fff; transform: scale(1.05); }
+        .btn:hover { 
+            background: #4a54d1; 
+            border-color: #fff; 
+            transform: scale(1.05); 
+        }
 
-        /* Hidden click-to-play backup */
-        #music-fallback {
-            position: fixed;
+        #status-msg {
+            position: absolute;
             bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 215, 0, 0.2);
-            border: 1px solid gold;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-size: 14px;
-            color: gold;
-            cursor: pointer;
-            z-index: 100;
-            display: none; /* Hidden unless autoplay fails */
+            color: rgba(255,255,255,0.3);
+            font-size: 10px;
         }
     </style>
 </head>
-<body onclick="tryPlayMusic()">
+<body onclick="forcePlay()">
 
     <img src="./thumbnails/bg_0.png" class="menu-bg-layer" id="bg-sky">
     <img src="./thumbnails/bg_1.png" class="menu-bg-layer" id="bg-clouds" style="opacity: 0.8;">
@@ -94,36 +88,29 @@
         <div class="btn" onclick="window.location.href='index.html'">Exit to Intro</div>
     </div>
 
-    <div id="music-fallback">🔊 Music is blocked. Click here to enable!</div>
+    <div id="status-msg">Click anywhere if music fails to auto-play</div>
 
 <script>
     const music = new Audio("./audio/menu.mp3");
     music.loop = true;
     music.volume = 0.5;
 
-    // Try to play immediately on load
-    window.addEventListener('DOMContentLoaded', () => {
+    // Autoplay attempt
+    window.addEventListener('load', () => {
         const musicEnabled = localStorage.getItem('musicEnabled') !== 'false';
-        
         if (musicEnabled) {
-            music.play().then(() => {
-                console.log("Autoplay successful!");
-            }).catch(err => {
-                console.warn("Autoplay blocked. Waiting for first click.");
-                document.getElementById('music-fallback').style.display = 'block';
+            music.play().catch(err => {
+                console.log("Autoplay blocked. User must click splash screen first.");
             });
         }
     });
 
-    // This function runs every time they click the page
-    function tryPlayMusic() {
-        if (music.paused) {
-            music.play();
-            document.getElementById('music-fallback').style.display = 'none';
-        }
+    // Backup: play if they click anywhere on this page
+    function forcePlay() {
+        if (music.paused) music.play();
     }
 
-    // Parallax logic
+    // Parallax
     window.onmousemove = (e) => {
         const x = (e.clientX / window.innerWidth) - 0.5;
         const y = (e.clientY / window.innerHeight) - 0.5;
